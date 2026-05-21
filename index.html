@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌍 World Guesses Game</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao"></script>
+    <!-- YOUR GOOGLE MAPS API KEY -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI"></script>
     <style>
         * {
             margin: 0;
@@ -142,8 +143,9 @@
             border-radius: 50%;
             margin-right: 5px;
         }
-        .dot-guess { background-color: blue; }
-        .dot-real { background-color: red; }
+        .dot-guess { background-color: #2196F3; }
+        .dot-real { background-color: #f44336; }
+        .inactive { opacity: 0.6; text-decoration: line-through; }
     </style>
 </head>
 <body>
@@ -273,10 +275,11 @@
             guessMarker: null,
             realMarker: null,
             lobbyCode: null,
-            isHost: false
+            userGuess: null,
+            gameRunning: false
         };
 
-        // 120+ LOCATIONS WORLDWIDE
+        // 🗺️ 120+ REAL LOCATIONS WORLDWIDE
         const globalLocations = [
             { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
             { lat: 51.5074, lng: -0.1278, name: "London, United Kingdom" },
@@ -307,60 +310,15 @@
             { lat: 24.8607, lng: 67.0011, name: "Karachi, Pakistan" },
             { lat: -6.2088, lng: 106.8456, name: "Jakarta, Indonesia" },
             { lat: 55.6761, lng: 12.5683, name: "Copenhagen, Denmark" },
-            { lat: 47.4979, lng: 19.0402, name: "Budapest, Hungary" }
-        ];
-
-        // --- SCREEN SWITCH ---
-        function switchScreen(id) {
-            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-        function backToMenu() { switchScreen('main-menu'); }
-        function showCreateLobby() {
-            switchScreen('create-lobby');
-            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            document.getElementById('generated-code').textContent = code;
-            gameState.lobbyCode = code;
-        }
-        function showJoinLobby() { switchScreen('join-lobby'); }
-
-        // --- HOST GAME ---
-        function startHostGame() {
-            const name = document.getElementById('host-name').value.trim();
-            if (!name) return alert("Enter your name!");
-
-            gameState.mode = document.getElementById('game-mode').value;
-            gameState.totalRounds = parseInt(document.getElementById('rounds-count').value);
-            gameState.timeLimit = parseInt(document.getElementById('time-limit').value);
-            gameState.players = [{name, score: 0, active: true}];
-            gameState.activePlayers = [...gameState.players];
-            gameState.locations = [...globalLocations].sort(() => Math.random() - 0.5).slice(0, gameState.totalRounds);
-            gameState.isHost = true;
-
-            startGameLogic();
-        }
-
-        // --- JOIN GAME ---
-        function joinGame() {
-            const code = document.getElementById('join-code').value.trim().toUpperCase();
-            const name = document.getElementById('join-name').value.trim();
-            if (!code || !name) return alert("Fill in both fields!");
-
-            gameState.lobbyCode = code;
-            gameState.players.push({name, score: 0, active: true});
-            gameState.activePlayers = [...gameState.players];
-
-            startGameLogic();
-        }
-
-        // --- START GAME ---
-        function startGameLogic() {
-            switchScreen('game-screen');
-            document.getElementById('total-rounds').textContent = gameState.totalRounds;
-            loadRound();
-        }
-
-        // --- LOAD ROUND ---
-        function loadRound() {
-            gameState.currentLocation = gameState.locations[gameState.currentRound - 1];
-            gameState.timeLeft = gameState.timeLimit
+            { lat: 47.4979, lng: 19.0402, name: "Budapest, Hungary" },
+            { lat: 38.7223, lng: -9.1393, name: "Lisbon, Portugal" },
+            { lat: 52.2297, lng: 21.0122, name: "Warsaw, Poland" },
+            { lat: 43.7384, lng: 7.4246, name: "Monaco" },
+            { lat: 50.8503, lng: 4.3517, name: "Brussels, Belgium" },
+            { lat: 59.9139, lng: 10.7522, name: "Oslo, Norway" },
+            { lat: 24.7136, lng: 46.6753, name: "Riyadh, Saudi Arabia" },
+            { lat: 36.1627, lng: -86.7816, name: "Nashville, USA" },
+            { lat: -26.2041, lng: 28.0473, name: "Johannesburg, South Africa" },
+            { lat: 41.3851, lng: 2.1734, name: "Barcelona, Spain" },
+            { lat: 22.3193, lng: 114.1694, name: "Hong Kong, China" },
+            { lat: 13.7563, lng: 100
