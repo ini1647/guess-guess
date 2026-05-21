@@ -236,9 +236,8 @@
     <div id="api-modal" class="api-modal">
         <div class="api-modal-content">
             <h2>🔑 Google Maps API Key</h2>
-            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #3182ce;">Learn how to get one →</a></p>
-            <input type="password" id="api-key-input" placeholder="
-               AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI " autocomplete="off">
+            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #318ce8;">Get your key here</a></p>
+            <input type="password" id="api-key-input" placeholder="AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI " autocomplete="off">
             <button onclick="saveAPIKey()">✅ Save & Continue</button>
             <div id="api-error"></div>
         </div>
@@ -474,7 +473,7 @@
 
         function loadMapsAPI(apiKey) {
             const script = document.getElementById('maps-api');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=streetview`;
         }
 
         // ========== SCREEN NAVIGATION ==========
@@ -571,12 +570,12 @@
                 gameState.streetView = new google.maps.StreetViewPanorama(
                     document.getElementById('streetview'),
                     {
-                        position: gameState.currentLocation,
+                        position: { lat: gameState.currentLocation.lat, lng: gameState.currentLocation.lng },
                         pov: { heading: 0, pitch: 0 }
                     }
                 );
             } else if (gameState.streetView) {
-                gameState.streetView.setPosition(gameState.currentLocation);
+                gameState.streetView.setPosition({ lat: gameState.currentLocation.lat, lng: gameState.currentLocation.lng });
             }
         }
 
