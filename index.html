@@ -73,31 +73,13 @@
             margin: 15px 0;
             border: 2px solid #cbd5e0;
         }
-        #panorama-container {
+        #panorama {
             width: 100%;
             height: 450px;
             margin: 20px 0;
             border-radius: 8px;
             overflow: hidden;
-            background: #e2e8f0;
-            position: relative;
             border: 1px solid #cbd5e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #street-view-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .street-view-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #718096;
-            font-size: 16px;
         }
         #map-container {
             width: 100%;
@@ -152,6 +134,7 @@
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA7K_-r6hTuqDA6r_56VN5k5q9ygc5_INk"></script>
 </head>
 <body>
 
@@ -224,10 +207,8 @@
         <h2>Round <span id="current-round-num">1</span> / <span id="total-rounds-num">5</span></h2>
         <div class="timer">Time Left: <span id="timer-count">60</span>s</div>
 
-        <div id="panorama-container">
-            <iframe id="street-view-iframe" style="display: none;"></iframe>
-            <div id="street-view-placeholder" class="street-view-loading">Loading street view...</div>
-        </div>
+        <div id="panorama"></div>
+        <p style="text-align: center; color: #718096; font-size: 14px; margin-top: -10px;">Drag to look around • Scroll to zoom</p>
 
         <div id="map-container"></div>
         <p class="small-text">Click anywhere on the map to place your guess</p>
@@ -253,9 +234,6 @@
     </div>
 
     <script>
-        // Mapillary Configuration
-        const MAPILLARY_ACCESS_TOKEN = 'MLY|26828721666780135|68c66fe206d9df5a3188c1734af08265';
-
         // GAME STATE
         let gameState = {
             mode: 'normal',
@@ -275,7 +253,8 @@
             lobbyCode: null,
             isHost: false,
             currentPlayerName: null,
-            guessesThisRound: {}
+            guessesThisRound: {},
+            panorama: null
         };
 
         // --------------------------
@@ -520,39 +499,21 @@
         }
 
         // --------------------------
-        // MAPILLARY STREET VIEW
+        // GOOGLE STREET VIEW
         // --------------------------
         function initializeStreetView() {
-            const lat = gameState.currentLocation.lat;
-            const lng = gameState.currentLocation.lng;
-            const placeholder = document.getElementById('street-view-placeholder');
-            const iframe = document.getElementById('street-view-iframe');
+            const panoramaElement = document.getElementById('panorama');
+            
+            const streetViewOptions = {
+                position: new google.maps.LatLng(gameState.currentLocation.lat, gameState.currentLocation.lng),
+                pov: {
+                    heading: 0,
+                    pitch: 0
+                },
+                zoom: 1
+            };
 
-            // Create Mapillary embed URL
-            const embedUrl = `https://www.mapillary.com/embed?image_key=&lng=${lng}&lat=${lat}&z=15&search=near`;
-            
-            // Use an alternate approach with static image from Mapillary API
-            const apiUrl = `https://graph.mapillary.com/imageSearch?access_token=${MAPILLARY_ACCESS_TOKEN}&lat=${lat}&lng=${lng}&radius=100&limit=1`;
-            
-            fetch(apiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.data && data.data.length > 0) {
-                        const imageKey = data.data[0].id;
-                        const imageUrl = `https://images.mapillary.com/${imageKey}/thumb-2048.jpg?client_id=${MAPILLARY_ACCESS_TOKEN}`;
-                        
-                        placeholder.style.backgroundImage = `url('${imageUrl}')`;
-                        placeholder.style.backgroundSize = 'cover';
-                        placeholder.style.backgroundPosition = 'center';
-                        placeholder.innerHTML = '';
-                    } else {
-                        placeholder.innerHTML = '<div style="padding: 20px;">Street view not available at this location. Use the map to guess!</div>';
-                    }
-                })
-                .catch(err => {
-                    console.warn('Error loading Mapillary image:', err);
-                    placeholder.innerHTML = '<div style="padding: 20px;">Street view not available. Use the map to guess!</div>';
-                });
+            gameState.panorama = new google.maps.StreetViewPanorama(panoramaElement, streetViewOptions);
         }
 
         function initializeMap() {
@@ -707,7 +668,8 @@
                 lobbyCode: null,
                 isHost: false,
                 currentPlayerName: null,
-                guessesThisRound: {}
+                guessesThisRound: {},
+                panorama: null
             };
         }
 
