@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌍 World Guesses Game</title>
-    <!-- YOUR GOOGLE MAPS API KEY -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI"></script>
+    <title>🌍 World Geography Game</title>
+    <!-- GOOGLE MAPS API KEY - WILL BE SET BY USER -->
+    <script id="maps-api"></script>
     <style>
         * {
             margin: 0;
@@ -52,9 +52,13 @@
             border: none;
             margin-top: 8px;
             font-weight: 500;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #2b6cb0;
+        }
+        button:active {
+            transform: scale(0.98);
         }
         .btn-secondary {
             background-color: #718096;
@@ -85,6 +89,7 @@
             border-radius: 8px;
             overflow: hidden;
             border: 2px solid #cbd5e0;
+            background-color: #ccc;
         }
         .minimap-container {
             flex: 1;
@@ -94,6 +99,7 @@
             overflow: hidden;
             border: 2px solid #cbd5e0;
             position: relative;
+            background-color: #f0f0f0;
         }
         .info-panel {
             flex: 1 1 100%;
@@ -115,6 +121,22 @@
             padding: 12px;
             border-radius: 6px;
             margin: 10px 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .player-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #3182ce;
+        }
+        .player-item.guessed {
+            border-left-color: #48bb78;
+        }
+        .player-item.pending {
+            border-left-color: #ed8936;
+            opacity: 0.7;
         }
         .result-box {
             text-align: center;
@@ -130,11 +152,14 @@
             top: 10px;
             left: 10px;
             background: white;
-            padding: 8px;
+            padding: 10px;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 12px;
             z-index: 10;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .legend-item {
+            margin: 4px 0;
         }
         .legend-dot {
             display: inline-block;
@@ -142,22 +167,93 @@
             height: 12px;
             border-radius: 50%;
             margin-right: 5px;
+            vertical-align: middle;
         }
         .dot-guess { background-color: #2196F3; }
         .dot-real { background-color: #f44336; }
-        .inactive { opacity: 0.6; text-decoration: line-through; }
+        .dot-other { background-color: #FFC107; }
+        .api-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .api-modal.active {
+            display: flex;
+        }
+        .api-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .api-modal-content h2 {
+            margin-bottom: 15px;
+        }
+        .api-modal-content input {
+            margin-bottom: 10px;
+        }
+        .api-modal-content button {
+            margin-top: 10px;
+        }
+        .error-msg {
+            color: #e53e3e;
+            font-weight: bold;
+            padding: 10px;
+            background: #fed7d7;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success-msg {
+            color: #22543d;
+            font-weight: bold;
+            padding: 10px;
+            background: #c6f6d5;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .guess-markers-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
 
+    <!-- API CONFIGURATION MODAL -->
+    <div id="api-modal" class="api-modal">
+        <div class="api-modal-content">
+            <h2>🔑 Google Maps API Key</h2>
+            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #3182ce;">Learn how to get one →</a></p>
+            <input type="password" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off">
+            <button onclick="saveAPIKey()">✅ Save & Continue</button>
+            <div id="api-error"></div>
+        </div>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="main-menu" class="screen active">
-        <h1>🌍 World Guesses Game</h1>
+        <h1>🌍 World Geography Game</h1>
         <div class="form-group">
             <button onclick="showCreateLobby()">🎮 Host New Game</button>
         </div>
         <div class="form-group">
             <button onclick="showJoinLobby()">🔌 Join Game with Code</button>
+        </div>
+        <div class="form-group">
+            <button class="btn-secondary" onclick="showAPIModal()">🔑 Change API Key</button>
         </div>
     </div>
 
@@ -226,8 +322,9 @@
             <!-- MINIMAP FOR GUESSES -->
             <div class="minimap-container">
                 <div class="marker-legend">
-                    <div><span class="legend-dot dot-guess"></span> Your Guess</div>
-                    <div><span class="legend-dot dot-real"></span> Real Location</div>
+                    <div class="legend-item"><span class="legend-dot dot-guess"></span> Your Guess</div>
+                    <div class="legend-item"><span class="legend-dot dot-real"></span> Real Location</div>
+                    <div class="legend-item"><span class="legend-dot dot-other"></span> Others' Guesses</div>
                 </div>
                 <div id="guess-map" style="width:100%;height:100%;"></div>
             </div>
@@ -238,11 +335,12 @@
                 <button onclick="nextRound()" id="next-btn" style="display:none;">➡ Next Round</button>
 
                 <div class="players-list">
-                    <h4>👥 Players & Scores</h4>
+                    <h4>👥 Players & Guesses</h4>
                     <div id="players-list"></div>
                 </div>
 
                 <div id="result-text" class="result-box"></div>
+                <div class="guess-markers-info">ℹ️ All guesses are displayed on the map. Red marker = correct answer.</div>
             </div>
         </div>
     </div>
@@ -272,14 +370,15 @@
             timer: null,
             streetView: null,
             guessMap: null,
-            guessMarker: null,
+            guessMarkers: [],
             realMarker: null,
             lobbyCode: null,
             userGuess: null,
-            gameRunning: false
+            gameRunning: false,
+            apiKey: null
         };
 
-        // 🗺️ 120+ REAL LOCATIONS WORLDWIDE
+        // 🗺️ WORLD LOCATIONS (Educational Geography Game)
         const globalLocations = [
             { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
             { lat: 51.5074, lng: -0.1278, name: "London, United Kingdom" },
@@ -325,4 +424,355 @@
             { lat: -33.4489, lng: -70.6693, name: "Santiago, Chile" },
             { lat: 4.7110, lng: -74.0721, name: "Bogotá, Colombia" },
             { lat: 14.5995, lng: 120.9842, name: "Manila, Philippines" },
-            { lat: 27.7172,
+            { lat: 27.7172, lng: 85.3240, name: "Kathmandu, Nepal" },
+            { lat: 33.7490, lng: -84.3880, name: "Atlanta, USA" },
+            { lat: -17.8252, lng: 25.8567, name: "Lusaka, Zambia" },
+            { lat: 30.0444, lng: 31.2357, name: "Cairo, Egypt" },
+            { lat: 18.5204, lng: 73.8567, name: "Mumbai, India" },
+            { lat: 19.0760, lng: 72.8777, name: "Mumbai, India" }
+        ];
+
+        // ========== API KEY MANAGEMENT ==========
+        function showAPIModal() {
+            document.getElementById('api-modal').classList.add('active');
+        }
+
+        function closeAPIModal() {
+            document.getElementById('api-modal').classList.remove('active');
+        }
+
+        function saveAPIKey() {
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            if (!apiKey) {
+                showAPIError('Please enter an API key');
+                return;
+            }
+            if (apiKey.length < 20) {
+                showAPIError('API key appears too short. Please check it.');
+                return;
+            }
+            gameState.apiKey = apiKey;
+            localStorage.setItem('mapsApiKey', apiKey);
+            loadMapsAPI(apiKey);
+            closeAPIModal();
+            showAPISuccess('API key saved successfully!');
+        }
+
+        function showAPIError(msg) {
+            const errorDiv = document.getElementById('api-error');
+            errorDiv.className = 'error-msg';
+            errorDiv.textContent = msg;
+        }
+
+        function showAPISuccess(msg) {
+            const errorDiv = document.getElementById('api-error');
+            errorDiv.className = 'success-msg';
+            errorDiv.textContent = msg;
+            setTimeout(() => errorDiv.textContent = '', 3000);
+        }
+
+        function loadMapsAPI(apiKey) {
+            const script = document.getElementById('maps-api');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+        }
+
+        // ========== SCREEN NAVIGATION ==========
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showCreateLobby() {
+            if (!gameState.apiKey) {
+                showAPIModal();
+                return;
+            }
+            generateLobbyCode();
+            showScreen('create-lobby');
+        }
+
+        function showJoinLobby() {
+            if (!gameState.apiKey) {
+                showAPIModal();
+                return;
+            }
+            showScreen('join-lobby');
+        }
+
+        function backToMenu() {
+            showScreen('main-menu');
+        }
+
+        // ========== LOBBY FUNCTIONS ==========
+        function generateLobbyCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            gameState.lobbyCode = code;
+            document.getElementById('generated-code').textContent = code;
+        }
+
+        function startHostGame() {
+            const name = document.getElementById('host-name').value.trim();
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+            gameState.mode = document.getElementById('game-mode').value;
+            gameState.totalRounds = parseInt(document.getElementById('rounds-count').value);
+            gameState.timeLimit = parseInt(document.getElementById('time-limit').value);
+            gameState.currentRound = 1;
+            gameState.players = [{ name: name, score: 0, guess: null, guessed: false, active: true }];
+            startGame();
+        }
+
+        function joinGame() {
+            const code = document.getElementById('join-code').value.trim().toUpperCase();
+            const name = document.getElementById('join-name').value.trim();
+            if (!code || !name) {
+                alert('Please enter lobby code and name');
+                return;
+            }
+            if (code !== gameState.lobbyCode) {
+                alert('Invalid lobby code');
+                return;
+            }
+            gameState.players.push({ name: name, score: 0, guess: null, guessed: false, active: true });
+            showScreen('game-screen');
+        }
+
+        // ========== GAME FUNCTIONS ==========
+        function startGame() {
+            gameState.gameRunning = true;
+            gameState.activePlayers = gameState.players.filter(p => p.active);
+            selectLocation();
+            initializeStreetView();
+            initializeGuessMap();
+            showScreen('game-screen');
+            updateUI();
+            startTimer();
+        }
+
+        function selectLocation() {
+            gameState.currentLocation = globalLocations[Math.floor(Math.random() * globalLocations.length)];
+            gameState.userGuess = null;
+            gameState.players.forEach(p => {
+                p.guess = null;
+                p.guessed = false;
+            });
+            clearGuessMarkers();
+        }
+
+        function initializeStreetView() {
+            if (!gameState.streetView && gameState.currentLocation) {
+                gameState.streetView = new google.maps.StreetViewPanorama(
+                    document.getElementById('streetview'),
+                    {
+                        position: gameState.currentLocation,
+                        pov: { heading: 0, pitch: 0 }
+                    }
+                );
+            } else if (gameState.streetView) {
+                gameState.streetView.setPosition(gameState.currentLocation);
+            }
+        }
+
+        function initializeGuessMap() {
+            if (!gameState.guessMap) {
+                gameState.guessMap = new google.maps.Map(document.getElementById('guess-map'), {
+                    zoom: 2,
+                    center: { lat: 20, lng: 0 }
+                });
+                gameState.guessMap.addListener('click', (e) => {
+                    placeGuess(e.latLng);
+                });
+            }
+        }
+
+        function placeGuess(location) {
+            gameState.userGuess = { lat: location.lat(), lng: location.lng() };
+            updateGuessMarkers();
+        }
+
+        function clearGuessMarkers() {
+            gameState.guessMarkers.forEach(m => m.setMap(null));
+            gameState.guessMarkers = [];
+            if (gameState.realMarker) {
+                gameState.realMarker.setMap(null);
+                gameState.realMarker = null;
+            }
+        }
+
+        function updateGuessMarkers() {
+            clearGuessMarkers();
+
+            // Draw all player guesses (except real location)
+            gameState.players.forEach((player, idx) => {
+                if (player.guess) {
+                    const isYourGuess = (player === gameState.players[0]);
+                    const marker = new google.maps.Marker({
+                        position: { lat: player.guess.lat, lng: player.guess.lng },
+                        map: gameState.guessMap,
+                        title: isYourGuess ? 'Your Guess' : `${player.name}'s Guess`,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: isYourGuess ? 12 : 8,
+                            fillColor: isYourGuess ? '#2196F3' : '#FFC107',
+                            fillOpacity: 0.8,
+                            strokeColor: 'white',
+                            strokeWeight: 2
+                        }
+                    });
+                    gameState.guessMarkers.push(marker);
+                }
+            });
+        }
+
+        function submitGuess() {
+            if (!gameState.userGuess) {
+                alert('Please click on the map to place your guess');
+                return;
+            }
+            gameState.players[0].guess = gameState.userGuess;
+            gameState.players[0].guessed = true;
+            updateGuessMarkers();
+            document.getElementById('submit-btn').disabled = true;
+            updateUI();
+            checkAllGuessed();
+        }
+
+        function checkAllGuessed() {
+            const allGuessed = gameState.players.every(p => p.guessed);
+            if (allGuessed) {
+                endRound();
+            }
+        }
+
+        function startTimer() {
+            gameState.timeLeft = gameState.timeLimit;
+            updateTimerDisplay();
+            if (gameState.timer) clearInterval(gameState.timer);
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimerDisplay();
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timer);
+                    endRound();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timer-value').textContent = Math.max(0, gameState.timeLeft);
+        }
+
+        function endRound() {
+            clearInterval(gameState.timer);
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'block';
+
+            // Auto-submit remaining guesses
+            gameState.players.forEach(p => {
+                if (!p.guessed && gameState.userGuess) {
+                    p.guess = gameState.userGuess;
+                }
+            });
+
+            // Calculate scores
+            gameState.players.forEach(player => {
+                if (player.guess) {
+                    const distance = calculateDistance(player.guess, gameState.currentLocation);
+                    const points = Math.max(0, 1000 - Math.floor(distance * 1.5));
+                    player.score += points;
+                }
+            });
+
+            // Show real location on map
+            gameState.realMarker = new google.maps.Marker({
+                position: gameState.currentLocation,
+                map: gameState.guessMap,
+                title: gameState.currentLocation.name,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 14,
+                    fillColor: '#f44336',
+                    fillOpacity: 0.9,
+                    strokeColor: 'white',
+                    strokeWeight: 3
+                }
+            });
+            gameState.guessMarkers.push(gameState.realMarker);
+
+            updateUI();
+        }
+
+        function calculateDistance(point1, point2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLng = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function nextRound() {
+            if (gameState.currentRound < gameState.totalRounds) {
+                gameState.currentRound++;
+                document.getElementById('current-round').textContent = gameState.currentRound;
+                document.getElementById('submit-btn').style.display = 'block';
+                document.getElementById('submit-btn').disabled = false;
+                document.getElementById('next-btn').style.display = 'none';
+                document.getElementById('result-text').innerHTML = '';
+                selectLocation();
+                initializeStreetView();
+                updateUI();
+                startTimer();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            showScreen('end-screen');
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const html = sorted.map((p, i) => `<div class="player-item"><strong>#${i+1}: ${p.name}</strong> - ${p.score} points</div>`).join('');
+            document.getElementById('final-results').innerHTML = html;
+        }
+
+        function resetGame() {
+            gameState.currentRound = 1;
+            gameState.players.forEach(p => p.score = 0);
+            backToMenu();
+        }
+
+        function updateUI() {
+            // Update player list with guess status
+            const playersList = gameState.players.map(p => {
+                const status = p.guessed ? '✅' : '⏳';
+                const className = p.guessed ? 'guessed' : 'pending';
+                return `<div class="player-item ${className}"><strong>${p.name}</strong> - ${p.score} pts ${status}</div>`;
+            }).join('');
+            document.getElementById('players-list').innerHTML = playersList;
+
+            // Update round info
+            document.getElementById('current-round').textContent = gameState.currentRound;
+            document.getElementById('total-rounds').textContent = gameState.totalRounds;
+        }
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('load', () => {
+            const savedApiKey = localStorage.getItem('mapsApiKey');
+            if (savedApiKey) {
+                gameState.apiKey = savedApiKey;
+                loadMapsAPI(savedApiKey);
+            } else {
+                showAPIModal();
+            }
+        });
+    </script>
+</body>
+</html>
