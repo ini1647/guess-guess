@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Guesses Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f0f4f8;
+            padding: 20px;
+        }
+        .screen {
+            display: none;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .screen.active {
+            display: block;
+        }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+        button:hover {
+            background-color: #2b6cb0;
+        }
+        .btn-secondary {
+            background-color: #718096;
+            margin-left: 0;
+            margin-top: 8px;
+        }
+        .btn-secondary:hover {
+            background-color: #4a5568;
+        }
+        .lobby-code-box {
+            background: #e2e8f0;
+            padding: 18px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 15px 0;
+            border: 2px solid #cbd5e0;
+        }
+        #panorama-container {
+            width: 100%;
+            height: 450px;
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #e2e8f0;
+            position: relative;
+            border: 1px solid #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #map-container {
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #cbd5e0;
+        }
+        .players-list, .scores-list {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            color: #e53e3e;
+            margin: 10px 0;
+        }
+        .result {
+            text-align: center;
+            font-size: 18px;
+            margin: 10px 0;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .coords-display {
+            font-size: 14px;
+            color: #718096;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .small-text {
+            font-size: 14px;
+            color: #718096;
+            text-align: center;
+            margin-top: 5px;
+        }
+        .player-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .player-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+    <!-- MAIN MENU -->
+    <div id="main-menu-screen" class="screen active">
+        <h1>🌍 World Guesses Game</h1>
+        <div class="form-group">
+            <button onclick="goToCreateLobby()">Create Private Lobby</button>
+        </div>
+        <div class="form-group">
+            <button onclick="goToJoinLobby()">Join Private Lobby</button>
+        </div>
+    </div>
+
+    <!-- CREATE LOBBY SCREEN -->
+    <div id="create-lobby-screen" class="screen">
+        <h1>Create Private Lobby</h1>
+        
+        <div class="form-group">
+            <label>Game Mode:</label>
+            <select id="create-game-mode">
+                <option value="normal">Normal Mode - Most Points Wins</option>
+                <option value="elimination">Elimination Mode - Lowest Score Eliminated Each Round</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Number of Rounds:</label>
+            <input type="number" id="create-rounds" min="1" value="5">
+        </div>
+
+        <div class="form-group">
+            <label>Time per Round (seconds):</label>
+            <input type="number" id="create-time-limit" min="10" value="60">
+        </div>
+
+        <div class="lobby-code-box">
+            Your Code: <span id="generated-code-display">----</span>
+        </div>
+
+        <div class="form-group">
+            <label>Your Name:</label>
+            <input type="text" id="host-player-name" placeholder="Enter your name...">
+        </div>
+
+        <button onclick="startNewLobby()">Create & Start Lobby</button>
+        <button class="btn-secondary" onclick="backToMainMenu()">Back</button>
+    </div>
+
+    <!-- JOIN LOBBY SCREEN -->
+    <div id="join-lobby-screen" class="screen">
+        <h1>Join Private Lobby</h1>
+        
+        <div class="form-group">
+            <label>Enter Lobby Code:</label>
+            <input type="text" id="join-code-input" placeholder="e.g. X7Y2B9">
+        </div>
+
+        <div class="form-group">
+            <label>Your Name:</label>
+            <input type="text" id="join-player-name-input" placeholder="Enter your name...">
+        </div>
+
+        <button onclick="joinExistingLobby()">Join Game</button>
+        <button class="btn-secondary" onclick="backToMainMenu()">Back</button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <h2>Round <span id="current-round-num">1</span> / <span id="total-rounds-num">5</span></h2>
+        <div class="timer">Time Left: <span id="timer-count">60</span>s</div>
+
+        <div id="panorama-container">
+            <div style="padding:30px; text-align:center; color:#4a5568;">
+                <h3>🌍 Location View</h3>
+                <p style="margin-top:10px;">Look at the scenery and guess where you are!</p>
+                <div class="coords-display" id="coords-hint"></div>
+            </div>
+        </div>
+
+        <div id="map-container"></div>
+        <p class="small-text">Click anywhere on the map to place your guess</p>
+        <button onclick="submitPlayerGuess()" id="submit-guess-btn">Submit Guess</button>
+
+        <div class="players-list">
+            <h3>Players & Scores</h3>
+            <div id="players-score-list"></div>
+        </div>
+
+        <div id="round-result-text" class="result"></div>
+        <button id="next-round-button" onclick="loadNextRound()" style="display:none;">Next Round</button>
+    </div>
+
+    <!-- END SCREEN -->
+    <div id="end-screen" class="screen">
+        <h1>🎉 Game Over!</h1>
+        <div class="scores-list">
+            <h2>Final Standings</h2>
+            <div id="final-results-list"></div>
+        </div>
+        <button onclick="resetEverything()">Play Again</button>
+    </div>
+
+    <script>
+        // GAME STATE
+        let gameState = {
+            mode: 'normal',
+            totalRounds: 5,
+            currentRound: 1,
+            timeLimit: 60,
+            timeLeft: 60,
+            players: [],
+            activePlayers: [],
+            locations: [],
+            currentLocation: null,
+            timer: null,
+            gameRunning: false,
+            guessMap: null,
+            guessMarker: null,
+            playerGuess: null,
+            lobbyCode: null,
+            isHost: false,
+            currentPlayerName: null,
+            guessesThisRound: {}
+        };
+
+        // --------------------------
+        // 120+ LOCATIONS WORLDWIDE
+        // --------------------------
+        const globalLocations = [
+            // Europe
+            { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
+            { lat: 51.5074, lng: -0.1278, name: "London, United Kingdom" },
+            { lat: 41.9028, lng: 12.4964, name: "Rome, Italy" },
+            { lat: 52.5200, lng: 13.4050, name: "Berlin, Germany" },
+            { lat: 40.4168, lng: -3.7038, name: "Madrid, Spain" },
+            { lat: 59.3293, lng: 18.0686, name: "Stockholm, Sweden" },
+            { lat: 60.1699, lng: 24.9384, name: "Helsinki, Finland" },
+            { lat: 47.4979, lng: 19.0402, name: "Budapest, Hungary" },
+            { lat: 50.0755, lng: 14.4378, name: "Prague, Czechia" },
+            { lat: 55.6761, lng: 12.5683, name: "Copenhagen, Denmark" },
+            { lat: 48.2082, lng: 16.3738, name: "Vienna, Austria" },
+            { lat: 53.3498, lng: -6.2603, name: "Dublin, Ireland" },
+            { lat: 42.6977, lng: 23.3219, name: "Sofia, Bulgaria" },
+            { lat: 52.2297, lng: 21.0122, name: "Warsaw, Poland" },
+            { lat: 37.9838, lng: 23.7275, name: "Athens, Greece" },
+            { lat: 56.9496, lng: 24.1052, name: "Riga, Latvia" },
+            { lat: 54.6872, lng: 25.2797, name: "Vilnius, Lithuania" },
+            { lat: 46.0569, lng: 14.5058, name: "Ljubljana, Slovenia" },
+            { lat: 44.8125, lng: 20.4612, name: "Belgrade, Serbia" },
+            { lat: 48.1486, lng: 17.1548, name: "Bratislava, Slovakia" },
+            { lat: 41.3275, lng: 19.8187, name: "Tirana, Albania" },
+            { lat: 42.4642, lng: 19.2594, name: "Podgorica, Montenegro" },
+            { lat: 43.8563, lng: 18.4131, name: "Sarajevo, Bosnia" },
+            { lat: 49.4438, lng: 32.0566, name: "Kyiv, Ukraine" },
+            { lat: 55.7558, lng: 37.6173, name: "Moscow, Russia" },
+            { lat: 39.9334, lng: 32.8597, name: "Ankara, Turkey" },
+            { lat: 35.9078, lng: 14.5146, name: "Valletta, Malta" },
+            // Asia
+            { lat: 35.6762, lng: 139.6503, name: "Tokyo, Japan" },
+            { lat: 39.9042, lng: 116.4074, name: "Beijing, China" },
+            { lat: 28.6139, lng: 77.2090, name: "New Delhi, India" },
+            { lat: 1.3521, lng: 103.8198, name: "Singapore" },
+            { lat: 13.7563, lng: 100.5018, name: "Bangkok, Thailand" },
+            { lat: 3.1390, lng: 101.6869, name: "Kuala Lumpur, Malaysia" },
+            { lat: 24.8607, lng: 67.0011, name: "Karachi, Pakistan" },
+            { lat: 23.8103, lng: 90.4125, name: "Dhaka, Bangladesh" },
+            { lat: 14.5995, lng: 120.9842, name: "Manila, Philippines" },
+            { lat: -6.2088, lng: 106.8456, name: "Jakarta, Indonesia" },
+            { lat: 27.7172, lng: 85.3240, name: "Kathmandu, Nepal" },
+            { lat: 41.2995, lng: 69.2401, name: "Tashkent, Uzbekistan" },
+            { lat: 33.6844, lng: 73.0479, name: "Islamabad, Pakistan" },
+            { lat: 35.8617, lng: 127.1534, name: "Seoul, South Korea" },
+            { lat: 26.0667, lng: 50.5577, name: "Manama, Bahrain" },
+            { lat: 29.3759, lng: 47.9774, name: "Kuwait City, Kuwait" },
+            { lat: 25.2760, lng: 55.2962, name: "Dubai, UAE" },
+            { lat: 21.4735, lng: 39.1861, name: "Jeddah, Saudi Arabia" },
+            { lat: 31.7683, lng: 35.2137, name: "Jerusalem, Israel" },
+            { lat: 36.2048, lng: 138.2529, name: "Mount Fuji Area, Japan" },
+            { lat: 22.3193, lng: 114.1694, name: "Hong Kong, China" },
+            { lat: 10.7769, lng: 106.7009, name: "Ho Chi Minh City, Vietnam" },
+            { lat: 16.8661, lng: 96.1951, name: "Yangon, Myanmar" },
+            { lat: 47.9025, lng: 106.9154, name: "Ulaanbaatar, Mongolia" },
+            { lat: 60.1695, lng: 24.9354, name: "Helsinki, Finland" },
+            { lat: 20.5937, lng: 78.9629, name: "Geographic Center of India" },
+            { lat: 43.2557, lng: 76.9295, name: "Almaty, Kazakhstan" },
+            // Americas
+            { lat: 40.7128, lng: -74.0060, name: "New York, USA" },
+            { lat: 34.0522, lng: -118.2437, name: "Los Angeles, USA" },
+            { lat: 41.8781, lng: -87.6298, name: "Chicago, USA" },
+            { lat: 29.7604, lng: -95.3698, name: "Houston, USA" },
+            { lat: 33.7490, lng: -84.3880, name: "Atlanta, USA" },
+            { lat: 47.6062, lng: -122.3321, name: "Seattle, USA" },
+            { lat: 37.7749, lng: -122.4194, name: "San Francisco, USA" },
+            { lat: 32.7157, lng: -117.1611, name: "San Diego, USA" },
+            { lat: 49.2827, lng: -123.1207, name: "Vancouver, Canada" },
+            { lat: 43.6629, lng: -79.3957, name: "Toronto, Canada" },
+            { lat: 45.5017, lng: -73.5673, name: "Montreal, Canada" },
+            { lat: 23.6345, lng: -102.5528, name: "Mexico City, Mexico" },
+            { lat: 19.4326, lng: -99.1332, name: "Mexico City Downtown" },
+            { lat: -23.5505, lng: -46.6333, name: "São Paulo, Brazil" },
+            { lat: -22.9068, lng: -43.1729, name: "Rio de Janeiro, Brazil" },
+            { lat: -33.8688, lng: -51.9192, name: "Buenos Aires, Argentina" },
+            { lat: -33.8870, lng: -151.2093, name: "Sydney, Australia" },
+            { lat: -37.8136, lng: 144.9631, name: "Melbourne, Australia" },
+            { lat: -41.2865, lng: 174.7762, name: "Auckland, New Zealand" },
+            { lat: 18.9712, lng: -77.0042, name: "Kingston, Jamaica" },
+            { lat: 15.0833, lng: -23.6167, name: "Praia, Cape Verde" },
+            { lat: 20.8581, lng: -156.4754, name: "Honolulu, Hawaii, USA" },
+            { lat: 37.7749, lng: -122.4194, name: "San Francisco Bay" },
+            // Africa
+            { lat: 30.0444, lng: 31.2357, name: "Cairo, Egypt" },
+            { lat: 33.5731, lng: -7.5898, name: "Casablanca, Morocco" },
+            { lat: -33.9249, lng: 18.4241, name: "Cape Town, South Africa" },
+            { lat: -1.2921, lng: 36.8219, name: "Nairobi, Kenya" },
+            { lat: -4.0383, lng: 21.7587, name: "Kinshasa, Democratic Republic of Congo" },
+            { lat: 6.4969, lng: 3.3711, name: "Lagos, Nigeria" },
+            { lat: 9.0765, lng: 7.3986, name: "Abuja, Nigeria" },
+            { lat: 12.6392, lng: -8.0029, name: "Freetown, Sierra Leone" },
+            { lat: -17.8252, lng: 31.0335, name: "Harare, Zimbabwe" },
+            { lat: -1.9536, lng: 29.8739, name: "Kigali, Rwanda" },
+            { lat: -25.7461, lng: 28.2293, name: "Johannesburg, South Africa" },
+            { lat: 9.5375, lng: 44.4033, name: "Mogadishu, Somalia" },
+            { lat: 12.5626, lng: 15.5279, name: "N'Djamena, Chad" },
+            { lat: 14.6349, lng: -90.5069, name: "Guatemala City, Guatemala" },
+            // Oceania
+            { lat: -12.4634, lng: 130.8456, name: "Darwin, Australia" },
+            { lat: -31.9505, lng: 115.8605, name: "Perth, Australia" },
+            { lat: -12.7634, lng: 132.7736, name: "Kakadu, Australia" },
+            { lat: -19.0760, lng: 146.7708, name: "Cairns, Australia" },
+            { lat: 21.3099, lng: -157.8581, name: "Honolulu, Hawaii" },
+            { lat: -21.4735, lng: 165.4950, name: "Fiji" },
+            { lat: -13.7590, lng: -177.0723, name: "Nadi, Fiji" },
+            { lat: -17.5528, lng: -149.5727, name: "Tahiti, French Polynesia" },
+            { lat: -9.4280, lng: 147.1789, name: "Port Moresby, Papua New Guinea" },
+            { lat: -41.2865, lng: 174.7762, name: "Auckland, New Zealand" },
+            { lat: -46.4014, lng: 168.3469, name: "Invercargill, New Zealand" },
+            { lat: -43.5320, lng: 172.6362, name: "Christchurch, New Zealand" },
+            // Arctic & Remote
+            { lat: 70.9469, lng: 25.9830, name: "Tromsø, Norway" },
+            { lat: 82.5018, lng: 62.3091, name: "Longyearbyen, Svalbard" },
+            { lat: 64.2008, lng: -51.6934, name: "Sisimiut, Greenland" },
+            { lat: 66.0843, lng: -53.6050, name: "Sisimut, Greenland" },
+            { lat: 64.1814, lng: -21.9154, name: "Reykjavik, Iceland" },
+            { lat: 63.4160, lng: -19.0208, name: "Akureyri, Iceland" }
+        ];
+
+        // --------------------------
+        // SCREEN MANAGEMENT
+        // --------------------------
+        function switchScreen(screenName) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenName).classList.add('active');
+        }
+
+        function goToCreateLobby() {
+            generateLobbyCode();
+            switchScreen('create-lobby-screen');
+        }
+
+        function goToJoinLobby() {
+            switchScreen('join-lobby-screen');
+        }
+
+        function backToMainMenu() {
+            resetEverything();
+            switchScreen('main-menu-screen');
+        }
+
+        // --------------------------
+        // LOBBY CODE GENERATION
+        // --------------------------
+        function generateLobbyCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            gameState.lobbyCode = code;
+            document.getElementById('generated-code-display').textContent = code;
+        }
+
+        // --------------------------
+        // GAME START
+        // --------------------------
+        function startNewLobby() {
+            const mode = document.getElementById('create-game-mode').value;
+            const rounds = parseInt(document.getElementById('create-rounds').value);
+            const timeLimit = parseInt(document.getElementById('create-time-limit').value);
+            const playerName = document.getElementById('host-player-name').value.trim();
+
+            if (!playerName) {
+                alert('Please enter your name!');
+                return;
+            }
+
+            gameState.mode = mode;
+            gameState.totalRounds = rounds;
+            gameState.timeLimit = timeLimit;
+            gameState.timeLeft = timeLimit;
+            gameState.isHost = true;
+            gameState.currentPlayerName = playerName;
+            
+            const player = { name: playerName, score: 0, eliminated: false };
+            gameState.players = [player];
+            gameState.activePlayers = [player];
+
+            startRound();
+        }
+
+        function joinExistingLobby() {
+            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+            const playerName = document.getElementById('join-player-name-input').value.trim();
+
+            if (!code || !playerName) {
+                alert('Please enter both lobby code and name!');
+                return;
+            }
+
+            // Simulate joining (in a real app, you'd validate with a server)
+            gameState.lobbyCode = code;
+            gameState.isHost = false;
+            gameState.currentPlayerName = playerName;
+
+            const player = { name: playerName, score: 0, eliminated: false };
+            gameState.players.push(player);
+            gameState.activePlayers.push(player);
+
+            // For demo purposes, start the game immediately
+            startRound();
+        }
+
+        // --------------------------
+        // GAME LOGIC
+        // --------------------------
+        function startRound() {
+            gameState.currentRound = 1;
+            gameState.locations = shuffleArray(globalLocations.slice(0, gameState.totalRounds));
+            gameState.guessesThisRound = {};
+            loadNextRound();
+        }
+
+        function loadNextRound() {
+            if (gameState.currentRound > gameState.totalRounds) {
+                endGame();
+                return;
+            }
+
+            gameState.timeLeft = gameState.timeLimit;
+            gameState.playerGuess = null;
+            gameState.guessMarker = null;
+            gameState.gameRunning = true;
+
+            gameState.currentLocation = gameState.locations[gameState.currentRound - 1];
+
+            // Update UI
+            document.getElementById('current-round-num').textContent = gameState.currentRound;
+            document.getElementById('total-rounds-num').textContent = gameState.totalRounds;
+            document.getElementById('round-result-text').innerHTML = '';
+            document.getElementById('next-round-button').style.display = 'none';
+            document.getElementById('submit-guess-btn').disabled = false;
+
+            switchScreen('game-screen');
+            initializeMap();
+            startTimer();
+            updatePlayersList();
+        }
+
+        function initializeMap() {
+            if (gameState.guessMap) {
+                gameState.guessMap.remove();
+            }
+
+            const mapContainer = document.getElementById('map-container');
+            gameState.guessMap = L.map(mapContainer).setView([20, 0], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(gameState.guessMap);
+
+            gameState.guessMap.on('click', function(e) {
+                if (!gameState.gameRunning) return;
+
+                const { lat, lng } = e.latlng;
+                gameState.playerGuess = { lat, lng };
+
+                if (gameState.guessMarker) {
+                    gameState.guessMap.removeLayer(gameState.guessMarker);
+                }
+
+                gameState.guessMarker = L.marker([lat, lng]).addTo(gameState.guessMap);
+                gameState.guessMarker.bindPopup('Your Guess').openPopup();
+            });
+        }
+
+        function startTimer() {
+            clearInterval(gameState.timer);
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('timer-count').textContent = gameState.timeLeft;
+
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timer);
+                    endRound();
+                }
+            }, 1000);
+        }
+
+        function submitPlayerGuess() {
+            if (!gameState.playerGuess) {
+                alert('Please click on the map to place your guess!');
+                return;
+            }
+
+            gameState.gameRunning = false;
+            clearInterval(gameState.timer);
+            endRound();
+        }
+
+        function endRound() {
+            gameState.gameRunning = false;
+            clearInterval(gameState.timer);
+
+            if (gameState.playerGuess) {
+                gameState.guessesThisRound[gameState.currentPlayerName] = gameState.playerGuess;
+                const distance = calculateDistance(
+                    gameState.currentLocation.lat,
+                    gameState.currentLocation.lng,
+                    gameState.playerGuess.lat,
+                    gameState.playerGuess.lng
+                );
+
+                const points = Math.max(0, Math.round(5000 - distance * 10));
+                
+                const playerIndex = gameState.players.findIndex(p => p.name === gameState.currentPlayerName);
+                if (playerIndex !== -1) {
+                    gameState.players[playerIndex].score += points;
+                }
+
+                document.getElementById('round-result-text').innerHTML = 
+                    `<strong>The location was: ${gameState.currentLocation.name}</strong><br>
+                     You earned: <strong>${points} points</strong>`;
+            } else {
+                document.getElementById('round-result-text').innerHTML = 
+                    `<strong>The location was: ${gameState.currentLocation.name}</strong><br>
+                     You ran out of time! 0 points earned.`;
+            }
+
+            showActualLocation();
+            updatePlayersList();
+            document.getElementById('next-round-button').style.display = 'block';
+            document.getElementById('submit-guess-btn').disabled = true;
+            gameState.currentRound++;
+        }
+
+        function showActualLocation() {
+            if (gameState.guessMarker) {
+                gameState.guessMap.removeLayer(gameState.guessMarker);
+            }
+
+            const actualMarker = L.marker([gameState.currentLocation.lat, gameState.currentLocation.lng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(gameState.guessMap);
+            
+            actualMarker.bindPopup(`Actual: ${gameState.currentLocation.name}`).openPopup();
+            gameState.guessMap.fitBounds([gameState.playerGuess, gameState.currentLocation].map(p => [p.lat, p.lng]));
+        }
+
+        // --------------------------
+        // SCORING & END GAME
+        // --------------------------
+        function updatePlayersList() {
+            const list = document.getElementById('players-score-list');
+            const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+            
+            list.innerHTML = sortedPlayers.map(p => 
+                `<div class="player-item">${p.name}: <strong>${p.score} pts</strong></div>`
+            ).join('');
+        }
+
+        function endGame() {
+            switchScreen('end-screen');
+            const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+            
+            const list = document.getElementById('final-results-list');
+            list.innerHTML = sortedPlayers.map((p, i) => 
+                `<div class="player-item" style="font-size: 18px; padding: 12px 0;">
+                    ${i + 1}. ${p.name}: <strong>${p.score} points</strong>
+                </div>`
+            ).join('');
+        }
+
+        function resetEverything() {
+            clearInterval(gameState.timer);
+            gameState = {
+                mode: 'normal',
+                totalRounds: 5,
+                currentRound: 1,
+                timeLimit: 60,
+                timeLeft: 60,
+                players: [],
+                activePlayers: [],
+                locations: [],
+                currentLocation: null,
+                timer: null,
+                gameRunning: false,
+                guessMap: null,
+                guessMarker: null,
+                playerGuess: null,
+                lobbyCode: null,
+                isHost: false,
+                currentPlayerName: null,
+                guessesThisRound: {}
+            };
+        }
+
+        // --------------------------
+        // UTILITIES
+        // --------------------------
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+    </script>
+</body>
+</html>
