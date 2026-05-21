@@ -86,9 +86,10 @@
             align-items: center;
             justify-content: center;
         }
-        #street-view {
+        #street-view-iframe {
             width: 100%;
             height: 100%;
+            border: none;
         }
         .street-view-loading {
             display: flex;
@@ -151,8 +152,6 @@
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/mapillary-js/dist/mapillary.js"></script>
-    <link href="https://unpkg.com/mapillary-js/dist/mapillary.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -226,7 +225,8 @@
         <div class="timer">Time Left: <span id="timer-count">60</span>s</div>
 
         <div id="panorama-container">
-            <div id="street-view"></div>
+            <iframe id="street-view-iframe" style="display: none;"></iframe>
+            <div id="street-view-placeholder" class="street-view-loading">Loading street view...</div>
         </div>
 
         <div id="map-container"></div>
@@ -255,7 +255,6 @@
     <script>
         // Mapillary Configuration
         const MAPILLARY_ACCESS_TOKEN = 'MLY|26828721666780135|68c66fe206d9df5a3188c1734af08265';
-        let mapillaryViewer = null;
 
         // GAME STATE
         let gameState = {
@@ -524,33 +523,36 @@
         // MAPILLARY STREET VIEW
         // --------------------------
         function initializeStreetView() {
-            const container = document.getElementById('street-view');
-            container.innerHTML = '<div class="street-view-loading">Loading street view...</div>';
+            const lat = gameState.currentLocation.lat;
+            const lng = gameState.currentLocation.lng;
+            const placeholder = document.getElementById('street-view-placeholder');
+            const iframe = document.getElementById('street-view-iframe');
 
-            try {
-                const options = {
-                    accessToken: MAPILLARY_ACCESS_TOKEN,
-                    container: 'street-view',
-                    imageId: null
-                };
-
-                // Create viewer
-                if (mapillaryViewer) {
-                    mapillaryViewer.remove();
-                }
-
-                mapillaryViewer = new mapillary.Viewer(options);
-
-                // Move viewer to location
-                mapillaryViewer.moveTo(gameState.currentLocation.lng, gameState.currentLocation.lat)
-                    .catch(err => {
-                        console.warn('Street view not available at this location:', err);
-                        container.innerHTML = '<div class="street-view-loading">Street view not available at this location. Use the map to guess!</div>';
-                    });
-            } catch (err) {
-                console.error('Error initializing Mapillary viewer:', err);
-                container.innerHTML = '<div class="street-view-loading">Error loading street view. Use the map to guess!</div>';
-            }
+            // Create Mapillary embed URL
+            const embedUrl = `https://www.mapillary.com/embed?image_key=&lng=${lng}&lat=${lat}&z=15&search=near`;
+            
+            // Use an alternate approach with static image from Mapillary API
+            const apiUrl = `https://graph.mapillary.com/imageSearch?access_token=${MAPILLARY_ACCESS_TOKEN}&lat=${lat}&lng=${lng}&radius=100&limit=1`;
+            
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        const imageKey = data.data[0].id;
+                        const imageUrl = `https://images.mapillary.com/${imageKey}/thumb-2048.jpg?client_id=${MAPILLARY_ACCESS_TOKEN}`;
+                        
+                        placeholder.style.backgroundImage = `url('${imageUrl}')`;
+                        placeholder.style.backgroundSize = 'cover';
+                        placeholder.style.backgroundPosition = 'center';
+                        placeholder.innerHTML = '';
+                    } else {
+                        placeholder.innerHTML = '<div style="padding: 20px;">Street view not available at this location. Use the map to guess!</div>';
+                    }
+                })
+                .catch(err => {
+                    console.warn('Error loading Mapillary image:', err);
+                    placeholder.innerHTML = '<div style="padding: 20px;">Street view not available. Use the map to guess!</div>';
+                });
         }
 
         function initializeMap() {
@@ -687,10 +689,6 @@
 
         function resetEverything() {
             clearInterval(gameState.timer);
-            if (mapillaryViewer) {
-                mapillaryViewer.remove();
-                mapillaryViewer = null;
-            }
             gameState = {
                 mode: 'normal',
                 totalRounds: 5,
