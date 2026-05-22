@@ -19,7 +19,7 @@
         }
         .screen {
             display: none;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         .screen.active {
@@ -77,75 +77,54 @@
             margin: 15px 0;
             border: 2px solid #cbd5e0;
         }
-        .game-layout {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .streetview-container {
-            flex: 3;
-            min-width: 600px;
-            height: 550px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #cbd5e0;
-            background-color: #ccc;
-        }
-        .minimap-container {
-            flex: 1;
-            min-width: 280px;
-            height: 550px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #cbd5e0;
-            position: relative;
-            background-color: #f0f0f0;
-        }
-        .info-panel {
-            flex: 1 1 100%;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-top: 15px;
-        }
         .timer {
-            font-size: 26px;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
             font-weight: bold;
             text-align: center;
             color: #e53e3e;
-            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 100;
         }
-        .players-list, .scores-list {
-            background: #f7fafc;
-            padding: 12px;
-            border-radius: 6px;
-            margin: 10px 0;
-            max-height: 250px;
-            overflow-y: auto;
+        .game-layout {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: stretch;
         }
-        .player-item {
-            padding: 8px;
-            margin: 5px 0;
-            background: white;
-            border-radius: 4px;
-            border-left: 4px solid #3182ce;
+        .streetview-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            overflow: hidden;
+            border: none;
+            background-color: #ccc;
         }
-        .player-item.guessed {
-            border-left-color: #48bb78;
+        .minimap-and-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 50;
         }
-        .player-item.pending {
-            border-left-color: #ed8936;
-            opacity: 0.7;
-        }
-        .result-box {
-            text-align: center;
-            font-size: 17px;
-            margin: 10px 0;
-            padding: 12px;
-            background: #edf2f7;
-            border-radius: 6px;
-            line-height: 1.5;
+        .minimap-container {
+            width: 350px;
+            height: 350px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 3px solid #cbd5e0;
+            background-color: #f0f0f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: relative;
         }
         .marker-legend {
             position: absolute;
@@ -172,6 +151,80 @@
         .dot-guess { background-color: #2196F3; }
         .dot-real { background-color: #f44336; }
         .dot-other { background-color: #FFC107; }
+        .controls-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 350px;
+        }
+        .controls-panel h4 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        .guess-instruction {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #edf2f7;
+            border-radius: 4px;
+        }
+        .guess-button {
+            width: 100%;
+            padding: 12px;
+            background-color: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .guess-button:hover {
+            background-color: #38a169;
+        }
+        .guess-button:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+        }
+        .next-button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .next-button:hover {
+            background-color: #2b6cb0;
+        }
+        .players-list {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .player-item {
+            padding: 6px;
+            margin: 3px 0;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #3182ce;
+        }
+        .player-item.guessed {
+            border-left-color: #48bb78;
+        }
+        .player-item.pending {
+            border-left-color: #ed8936;
+            opacity: 0.7;
+        }
         .api-modal {
             display: none;
             position: fixed;
@@ -220,13 +273,18 @@
             border-radius: 4px;
             margin: 10px 0;
         }
-        .guess-markers-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
+        .round-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3748;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 100;
         }
     </style>
 </head>
@@ -236,8 +294,8 @@
     <div id="api-modal" class="api-modal">
         <div class="api-modal-content">
             <h2>🔑 Google Maps API Key</h2>
-            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #318ce8;">Get your key here</a></p>
-            <input type="password" id="api-key-input" placeholder="AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI " autocomplete="off">
+            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #3182ce;">Get your key here</a></p>
+            <input type="password" id="api-key-input" placeholder="Enter your API key..." autocomplete="off">
             <button onclick="saveAPIKey()">✅ Save & Continue</button>
             <div id="api-error"></div>
         </div>
@@ -312,35 +370,35 @@
 
     <!-- GAME SCREEN -->
     <div id="game-screen" class="screen">
-        <h2>Round <span id="current-round">1</span> / <span id="total-rounds">5</span></h2>
         <div class="timer">⏱ Time Left: <span id="timer-value">60</span>s</div>
+        <div class="round-info">Round <span id="current-round">1</span> / <span id="total-rounds">5</span></div>
 
         <div class="game-layout">
             <!-- STREET VIEW -->
             <div class="streetview-container" id="streetview"></div>
 
-            <!-- MINIMAP FOR GUESSES -->
-            <div class="minimap-container">
-                <div class="marker-legend">
-                    <div class="legend-item"><span class="legend-dot dot-guess"></span> Your Guess</div>
-                    <div class="legend-item"><span class="legend-dot dot-real"></span> Real Location</div>
-                    <div class="legend-item"><span class="legend-dot dot-other"></span> Others' Guesses</div>
-                </div>
-                <div id="guess-map" style="width:100%;height:100%;"></div>
-            </div>
-
-            <!-- INFO PANEL -->
-            <div class="info-panel">
-                <button onclick="submitGuess()" id="submit-btn">📍 Submit Guess</button>
-                <button onclick="nextRound()" id="next-btn" style="display:none;">➡ Next Round</button>
-
-                <div class="players-list">
-                    <h4>👥 Players & Guesses</h4>
-                    <div id="players-list"></div>
+            <!-- MINIMAP AND CONTROLS (Bottom Right) -->
+            <div class="minimap-and-controls">
+                <!-- MINIMAP -->
+                <div class="minimap-container">
+                    <div class="marker-legend">
+                        <div class="legend-item"><span class="legend-dot dot-guess"></span> Your Guess</div>
+                        <div class="legend-item"><span class="legend-dot dot-real"></span> Real Location</div>
+                        <div class="legend-item"><span class="legend-dot dot-other"></span> Others' Guesses</div>
+                    </div>
+                    <div id="guess-map" style="width:100%;height:100%;"></div>
                 </div>
 
-                <div id="result-text" class="result-box"></div>
-                <div class="guess-markers-info">ℹ️ All guesses are displayed on the map. Red marker = correct answer.</div>
+                <!-- CONTROLS PANEL -->
+                <div class="controls-panel">
+                    <h4>📍 Guess</h4>
+                    <div class="guess-instruction">Click on the map to place your guess!</div>
+                    <button class="guess-button" onclick="submitGuess()" id="submit-btn">✅ Submit Guess</button>
+                    <button class="next-button" onclick="nextRound()" id="next-btn" style="display:none;">➡ Next Round</button>
+                    
+                    <h4 style="margin-top: 15px; margin-bottom: 8px;">👥 Players</h4>
+                    <div class="players-list" id="players-list"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -348,11 +406,11 @@
     <!-- END SCREEN -->
     <div id="end-screen" class="screen">
         <h1>🏁 Game Over!</h1>
-        <div class="scores-list">
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <h2>Final Standings</h2>
-            <div id="final-results"></div>
+            <div id="final-results" style="margin: 20px 0;"></div>
         </div>
-        <button onclick="resetGame()">🔄 Play Again</button>
+        <button onclick="resetGame()" style="max-width: 200px; margin: 20px auto; display: block;">🔄 Play Again</button>
     </div>
 
     <script>
@@ -375,7 +433,8 @@
             lobbyCode: null,
             userGuess: null,
             gameRunning: false,
-            apiKey: null
+            apiKey: null,
+            roundEnded: false
         };
 
         // 🗺️ WORLD LOCATIONS (Educational Geography Game)
@@ -546,6 +605,7 @@
         // ========== GAME FUNCTIONS ==========
         function startGame() {
             gameState.gameRunning = true;
+            gameState.roundEnded = false;
             gameState.activePlayers = gameState.players.filter(p => p.active);
             selectLocation();
             initializeStreetView();
@@ -586,7 +646,9 @@
                     center: { lat: 20, lng: 0 }
                 });
                 gameState.guessMap.addListener('click', (e) => {
-                    placeGuess(e.latLng);
+                    if (!gameState.roundEnded) {
+                        placeGuess(e.latLng);
+                    }
                 });
             }
         }
@@ -606,9 +668,13 @@
         }
 
         function updateGuessMarkers() {
-            clearGuessMarkers();
+            // Only clear non-real markers
+            gameState.guessMarkers.forEach(m => {
+                if (m !== gameState.realMarker) m.setMap(null);
+            });
+            gameState.guessMarkers = gameState.realMarker ? [gameState.realMarker] : [];
 
-            // Draw all player guesses (except real location)
+            // Draw all player guesses
             gameState.players.forEach((player, idx) => {
                 if (player.guess) {
                     const isYourGuess = (player === gameState.players[0]);
@@ -669,6 +735,7 @@
         }
 
         function endRound() {
+            gameState.roundEnded = true;
             clearInterval(gameState.timer);
             document.getElementById('submit-btn').style.display = 'none';
             document.getElementById('next-btn').style.display = 'block';
@@ -704,6 +771,7 @@
                 }
             });
             gameState.guessMarkers.push(gameState.realMarker);
+            updateGuessMarkers();
 
             updateUI();
         }
@@ -726,10 +794,10 @@
                 document.getElementById('submit-btn').style.display = 'block';
                 document.getElementById('submit-btn').disabled = false;
                 document.getElementById('next-btn').style.display = 'none';
-                document.getElementById('result-text').innerHTML = '';
                 selectLocation();
                 initializeStreetView();
                 updateUI();
+                gameState.roundEnded = false;
                 startTimer();
             } else {
                 endGame();
