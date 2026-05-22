@@ -2,433 +2,687 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>Multiplayer Street View Guess</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>World Guess Game</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial,Helvetica,sans-serif;
-}
-
-body{
-    overflow:hidden;
-    background:#111;
-    color:white;
-}
-
-#game{
-    width:100vw;
-    height:100vh;
-    position:relative;
-}
-
-#streetview{
-    width:100%;
-    height:100%;
-}
-
-#map{
-    position:absolute;
-    bottom:20px;
-    right:20px;
-    width:320px;
-    height:220px;
-    border-radius:14px;
-    overflow:hidden;
-    border:3px solid white;
-    z-index:5;
-}
-
-#topBar{
-    position:absolute;
-    top:15px;
-    left:50%;
-    transform:translateX(-50%);
-    z-index:10;
-    background:rgba(0,0,0,0.7);
-    padding:12px 20px;
-    border-radius:12px;
-    font-size:24px;
-    font-weight:bold;
-}
-
-#bottomUI{
-    position:absolute;
-    bottom:20px;
-    left:20px;
-    z-index:10;
-    display:flex;
-    gap:10px;
-}
-
-button{
-    padding:12px 20px;
-    border:none;
-    border-radius:10px;
-    background:#1e88e5;
-    color:white;
-    font-size:18px;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-button:hover{
-    background:#1565c0;
-}
-
-#scoreboard{
-    position:absolute;
-    top:20px;
-    right:20px;
-    z-index:10;
-    background:rgba(0,0,0,0.7);
-    padding:15px;
-    border-radius:12px;
-    width:220px;
-}
-
-#roundInfo{
-    margin-bottom:10px;
-}
-
-#result{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    background:rgba(0,0,0,0.85);
-    padding:25px;
-    border-radius:15px;
-    text-align:center;
-    z-index:20;
-    display:none;
-    min-width:300px;
-}
-
-h2{
-    margin-bottom:10px;
-}
-
-.player{
-    margin-top:8px;
-}
-
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
+body{background:#111;color:#fff;overflow:hidden;}
+#app{width:100vw;height:100vh;display:flex;}
+#leftPanel{width:320px;background:#181818;border-right:2px solid #333;padding:15px;overflow-y:auto;}
+#gameArea{flex:1;position:relative;}
+h1{font-size:22px;margin-bottom:10px;}
+label{font-size:13px;display:block;margin-top:8px;margin-bottom:3px;}
+input,select{width:100%;padding:6px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;font-size:13px;}
+button{margin-top:8px;width:100%;padding:8px 10px;border:none;border-radius:6px;background:#1e88e5;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;}
+button:hover{background:#1565c0;}
+button.small{width:auto;padding:6px 10px;font-size:12px;margin-right:5px;}
+.section{margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid #333;}
+#status{font-size:12px;color:#ccc;margin-top:5px;min-height:16px;}
+#playersList{font-size:13px;margin-top:5px;}
+.playerItem{margin-top:2px;}
+#streetview{position:absolute;top:0;left:0;width:100%;height:100%;}
+#miniMap{position:absolute;bottom:15px;right:15px;width:260px;height:180px;border-radius:10px;overflow:hidden;border:2px solid #fff;z-index:5;background:#000;}
+#revealMap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70vw;height:70vh;border-radius:12px;overflow:hidden;border:3px solid #fff;z-index:20;display:none;}
+#topBar{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:6px 14px;border-radius:10px;font-size:14px;z-index:10;}
+#roundInfo{font-weight:bold;}
+#timer{margin-left:10px;}
+#centerOverlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);padding:18px 22px;border-radius:12px;text-align:center;z-index:30;display:none;min-width:260px;}
+#centerOverlay h2{margin-bottom:8px;font-size:18px;}
+#centerOverlay p{font-size:13px;margin-top:4px;}
+#hostControls{margin-top:8px;}
+#guessButton{position:absolute;bottom:15px;left:15px;z-index:6;padding:10px 16px;border-radius:10px;border:none;background:#43a047;color:#fff;font-weight:bold;font-size:14px;cursor:pointer;}
+#guessButton:hover{background:#2e7d32;}
+#nextRoundBtn{margin-top:6px;}
+.badge{display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;background:#333;margin-left:4px;}
+.eliminated{color:#f44336;text-decoration:line-through;}
 </style>
 </head>
 <body>
 
-<div id="game">
+<div id="app">
+  <div id="leftPanel">
+    <h1>Street View Guess</h1>
 
+    <div class="section">
+      <label>Player name</label>
+      <input id="playerNameInput" placeholder="Your name">
+
+      <label style="margin-top:10px;">Room ID</label>
+      <input id="roomIdInput" placeholder="e.g. ABC123">
+
+      <button id="hostBtn">Host Game</button>
+      <button id="joinBtn">Join Game</button>
+      <div id="status"></div>
+    </div>
+
+    <div class="section" id="lobbySection" style="display:none;">
+      <div><strong>Room:</strong> <span id="roomLabel"></span></div>
+      <div><strong>You are:</strong> <span id="roleLabel"></span></div>
+
+      <div id="hostSettings" style="margin-top:8px;display:none;">
+        <label>Round time (seconds)</label>
+        <select id="roundTimeSelect">
+          <option value="30">30</option>
+          <option value="60" selected>60</option>
+          <option value="90">90</option>
+        </select>
+
+        <label style="margin-top:8px;">Total rounds</label>
+        <select id="totalRoundsSelect">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+        </select>
+
+        <label style="margin-top:8px;">Elimination mode</label>
+        <select id="elimSelect">
+          <option value="on" selected>On</option>
+          <option value="off">Off</option>
+        </select>
+
+        <button id="startGameBtn">Start Game</button>
+        <button id="nextRoundBtn" style="display:none;">Next Round</button>
+      </div>
+
+      <div style="margin-top:10px;">
+        <strong>Players</strong>
+        <div id="playersList"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div><strong>Round:</strong> <span id="roundText">-</span></div>
+      <div><strong>Mode:</strong> <span id="modeText">Lobby</span></div>
+      <div><strong>Your score:</strong> <span id="scoreText">0</span></div>
+    </div>
+  </div>
+
+  <div id="gameArea">
     <div id="streetview"></div>
-
-    <div id="map"></div>
+    <div id="miniMap"></div>
+    <div id="revealMap"></div>
 
     <div id="topBar">
-        ⏱ <span id="timer">60</span>s
+      <span id="roundInfo">Waiting…</span>
+      <span id="timer"></span>
     </div>
 
-    <div id="scoreboard">
-        <div id="roundInfo">
-            Round <span id="round">1</span>/5
-        </div>
+    <button id="guessButton" disabled>PLACE GUESS</button>
 
-        <div id="players"></div>
+    <div id="centerOverlay">
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayBody"></p>
     </div>
-
-    <div id="bottomUI">
-        <button onclick="submitGuess()">GUESS</button>
-    </div>
-
-    <div id="result">
-        <h2>Round Result</h2>
-        <p id="distanceText"></p>
-        <p id="pointsText"></p>
-    </div>
-
+  </div>
 </div>
 
-<script>
+<!-- Firebase + Google Maps -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, set, update, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-const API_KEY = "AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI";
+const firebaseConfig = {
+  apiKey: "AIzaSyDY7Vp4D6kVvuUlEAuPj3fF5HAhgFQyuBM",
+  authDomain: "guess-guess-341f2.firebaseapp.com",
+  databaseURL: "https://guess-guess-341f2-default-rtdb.firebaseio.com/",
+  projectId: "guess-guess-341f2",
+  storageBucket: "guess-guess-341f2.firebasestorage.app",
+  messagingSenderId: "689612936370",
+  appId: "1:689612936370:web:813d881fdd7383c67a65ab"
+};
 
-let streetView;
-let map;
-let guessMarker = null;
-let realMarker = null;
-let line = null;
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-let timer;
-let timeLeft = 60;
+// DOM
+const statusEl = document.getElementById("status");
+const hostBtn = document.getElementById("hostBtn");
+const joinBtn = document.getElementById("joinBtn");
+const playerNameInput = document.getElementById("playerNameInput");
+const roomIdInput = document.getElementById("roomIdInput");
+const lobbySection = document.getElementById("lobbySection");
+const roomLabel = document.getElementById("roomLabel");
+const roleLabel = document.getElementById("roleLabel");
+const playersList = document.getElementById("playersList");
+const hostSettings = document.getElementById("hostSettings");
+const startGameBtn = document.getElementById("startGameBtn");
+const nextRoundBtn = document.getElementById("nextRoundBtn");
+const roundTimeSelect = document.getElementById("roundTimeSelect");
+const totalRoundsSelect = document.getElementById("totalRoundsSelect");
+const elimSelect = document.getElementById("elimSelect");
+const roundText = document.getElementById("roundText");
+const modeText = document.getElementById("modeText");
+const scoreText = document.getElementById("scoreText");
+const roundInfo = document.getElementById("roundInfo");
+const timerEl = document.getElementById("timer");
+const guessButton = document.getElementById("guessButton");
+const overlay = document.getElementById("centerOverlay");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayBody = document.getElementById("overlayBody");
 
-let currentRound = 1;
-let totalRounds = 5;
+// Game state
+let myId = null;
+let myName = "";
+let myRoom = null;
+let isHost = false;
+let currentRound = 0;
+let totalRounds = 0;
+let roundTime = 60;
+let elimMode = true;
+let timerInterval = null;
+let timeLeft = 0;
+let streetViewPanorama = null;
+let miniMap = null;
+let miniGuessMarker = null;
+let revealMap = null;
+let revealMarkers = [];
+let revealLine = null;
+let myGuess = null;
+let currentLocation = null;
+let hasGuessedThisRound = false;
 
-let guessPosition = null;
-
-let score = 0;
-
-const locations = [
-
-{lat:40.7580,lng:-73.9855},
-{lat:48.8584,lng:2.2945},
-{lat:51.5007,lng:-0.1246},
-{lat:35.6595,lng:139.7005},
-{lat:-33.8568,lng:151.2153},
-{lat:41.9028,lng:12.4964},
-{lat:52.5200,lng:13.4050},
-{lat:37.7749,lng:-122.4194},
-{lat:25.1972,lng:55.2744},
-{lat:-22.9519,lng:-43.2105},
-{lat:59.3293,lng:18.0686},
-{lat:41.3851,lng:2.1734},
-{lat:50.0755,lng:14.4378},
-{lat:1.3521,lng:103.8198},
-{lat:34.0522,lng:-118.2437},
-{lat:43.6532,lng:-79.3832},
-{lat:55.7558,lng:37.6173},
-{lat:45.5017,lng:-73.5673},
-{lat:60.1699,lng:24.9384},
-{lat:59.9139,lng:10.7522},
-{lat:55.6761,lng:12.5683},
-{lat:52.3676,lng:4.9041},
-{lat:50.8503,lng:4.3517},
-{lat:47.4979,lng:19.0402},
-{lat:48.2082,lng:16.3738},
-{lat:47.3769,lng:8.5417},
-{lat:45.4642,lng:9.1900},
-{lat:40.4168,lng:-3.7038},
-{lat:38.7223,lng:-9.1393},
-{lat:53.3498,lng:-6.2603},
-{lat:37.9838,lng:23.7275},
-{lat:41.0082,lng:28.9784},
-{lat:30.0444,lng:31.2357},
-{lat:-33.9249,lng:18.4241},
-{lat:-1.2921,lng:36.8219},
-{lat:19.0760,lng:72.8777},
-{lat:28.6139,lng:77.2090},
-{lat:31.2304,lng:121.4737},
-{lat:39.9042,lng:116.4074},
-{lat:37.5665,lng:126.9780},
-{lat:13.7563,lng:100.5018},
-{lat:-6.2088,lng:106.8456},
-{lat:-37.8136,lng:144.9631},
-{lat:49.2827,lng:-123.1207},
-{lat:19.4326,lng:-99.1332},
-{lat:4.7110,lng:-74.0721},
-{lat:-12.0464,lng:-77.0428},
-{lat:-33.4489,lng:-70.6693},
-{lat:-34.6037,lng:-58.3816},
-{lat:-23.5505,lng:-46.6333}
-
-];
-
-let currentLocation;
-
-function initGame(){
-
-    map = new google.maps.Map(document.getElementById("map"),{
-        zoom:2,
-        center:{lat:20,lng:0},
-        disableDefaultUI:true,
-        gestureHandling:"greedy"
-    });
-
-    map.addListener("click",(e)=>{
-
-        guessPosition = {
-            lat:e.latLng.lat(),
-            lng:e.latLng.lng()
-        };
-
-        if(guessMarker) guessMarker.setMap(null);
-
-        guessMarker = new google.maps.Marker({
-            position:guessPosition,
-            map:map
-        });
-
-    });
-
-    loadRound();
-
+// Utils
+function setStatus(msg){ statusEl.textContent = msg; }
+function showOverlay(title, body){
+  overlayTitle.textContent = title;
+  overlayBody.textContent = body;
+  overlay.style.display = "block";
 }
+function hideOverlay(){ overlay.style.display = "none"; }
 
-function loadRound(){
+// Firebase paths
+function roomRef(roomId){ return ref(db, "rooms/"+roomId); }
+function playersRef(roomId){ return ref(db, "rooms/"+roomId+"/players"); }
+function stateRef(roomId){ return ref(db, "rooms/"+roomId+"/state"); }
+function guessesRef(roomId, round){ return ref(db, "rooms/"+roomId+"/guesses/round"+round); }
 
-    clearMap();
+// Hosting / joining
+hostBtn.onclick = async () => {
+  const name = playerNameInput.value.trim() || "Player";
+  const roomId = (roomIdInput.value.trim() || makeRoomId()).toUpperCase();
+  myId = makeId();
+  myName = name;
+  myRoom = roomId;
+  isHost = true;
 
-    timeLeft = 60;
-    document.getElementById("timer").innerText = timeLeft;
-
-    currentLocation = locations[Math.floor(Math.random()*locations.length)];
-
-    const sv = new google.maps.StreetViewService();
-
-    sv.getPanorama({
-        location:currentLocation,
-        radius:50000
-    },(data,status)=>{
-
-        if(status==="OK"){
-
-            streetView = new google.maps.StreetViewPanorama(
-                document.getElementById("streetview"),
-                {
-                    pano:data.location.pano,
-                    pov:{
-                        heading:Math.random()*360,
-                        pitch:0
-                    },
-                    addressControl:false,
-                    showRoadLabels:false,
-                    linksControl:true,
-                    panControl:false,
-                    enableCloseButton:false,
-                    fullscreenControl:true
-                }
-            );
-
-        }else{
-            loadRound();
-        }
-
-    });
-
-    startTimer();
-
-    updateUI();
-
-}
-
-function startTimer(){
-
-    clearInterval(timer);
-
-    timer = setInterval(()=>{
-
-        timeLeft--;
-
-        document.getElementById("timer").innerText = timeLeft;
-
-        if(timeLeft<=0){
-            submitGuess();
-        }
-
-    },1000);
-
-}
-
-function submitGuess(){
-
-    clearInterval(timer);
-
-    if(!guessPosition){
-        alert("Place a marker on the map first.");
-        return;
+  await set(roomRef(roomId), {
+    createdAt: Date.now(),
+    hostId: myId,
+    settings: {
+      roundTime: 60,
+      totalRounds: 5,
+      elimination: true,
+      maxPlayers: 10
+    },
+    state: {
+      phase: "lobby",
+      round: 0
     }
+  });
 
-    realMarker = new google.maps.Marker({
-        position:currentLocation,
-        map:map,
-        icon:"http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+  await set(ref(db, "rooms/"+roomId+"/players/"+myId), {
+    name: myName,
+    score: 0,
+    eliminated: false,
+    joinedAt: Date.now()
+  });
+
+  enterLobby();
+};
+
+joinBtn.onclick = async () => {
+  const name = playerNameInput.value.trim() || "Player";
+  const roomId = roomIdInput.value.trim().toUpperCase();
+  if(!roomId){ setStatus("Enter a room ID."); return; }
+
+  myId = makeId();
+  myName = name;
+  myRoom = roomId;
+  isHost = false;
+
+  const pRef = ref(db, "rooms/"+roomId+"/players/"+myId);
+  await set(pRef, {
+    name: myName,
+    score: 0,
+    eliminated: false,
+    joinedAt: Date.now()
+  });
+
+  enterLobby();
+};
+
+function enterLobby(){
+  lobbySection.style.display = "block";
+  roomLabel.textContent = myRoom;
+  roleLabel.textContent = isHost ? "Host" : "Player";
+  hostSettings.style.display = isHost ? "block" : "none";
+  modeText.textContent = "Lobby";
+  roundText.textContent = "-";
+  scoreText.textContent = "0";
+  setStatus("Connected to room.");
+
+  onValue(playersRef(myRoom), snap => {
+    const players = snap.val() || {};
+    renderPlayers(players);
+  });
+
+  onValue(ref(db, "rooms/"+myRoom+"/settings"), snap => {
+    const s = snap.val();
+    if(!s) return;
+    if(isHost){
+      roundTimeSelect.value = s.roundTime;
+      totalRoundsSelect.value = s.totalRounds;
+      elimSelect.value = s.elimination ? "on" : "off";
+    }
+  });
+
+  onValue(stateRef(myRoom), snap => {
+    const st = snap.val();
+    if(!st) return;
+    handleStateChange(st);
+  });
+
+  if(isHost){
+    roundTimeSelect.onchange = () => {
+      update(ref(db, "rooms/"+myRoom+"/settings"), { roundTime: parseInt(roundTimeSelect.value) });
+    };
+    totalRoundsSelect.onchange = () => {
+      update(ref(db, "rooms/"+myRoom+"/settings"), { totalRounds: parseInt(totalRoundsSelect.value) });
+    };
+    elimSelect.onchange = () => {
+      update(ref(db, "rooms/"+myRoom+"/settings"), { elimination: elimSelect.value === "on" });
+    };
+  }
+}
+
+// Players list
+function renderPlayers(players){
+  playersList.innerHTML = "";
+  Object.entries(players).forEach(([id,p])=>{
+    const div = document.createElement("div");
+    div.className = "playerItem";
+    let cls = "";
+    if(p.eliminated) cls = "eliminated";
+    div.innerHTML = `<span class="${cls}">${p.name}</span> <span class="badge">${p.score||0} pts</span>`;
+    playersList.appendChild(div);
+    if(id === myId){
+      scoreText.textContent = p.score || 0;
+    }
+  });
+}
+
+// State handling
+function handleStateChange(st){
+  const phase = st.phase;
+  currentRound = st.round || 0;
+  roundText.textContent = currentRound || "-";
+
+  if(phase === "lobby"){
+    modeText.textContent = "Lobby";
+    roundInfo.textContent = "Waiting in lobby";
+    timerEl.textContent = "";
+    guessButton.disabled = true;
+    hideOverlay();
+    hideRevealMap();
+  } else if(phase === "starting"){
+    modeText.textContent = "Starting";
+    roundInfo.textContent = "Get ready…";
+    timerEl.textContent = "";
+    guessButton.disabled = true;
+    showOverlay("Get ready", "The host is starting the game.");
+  } else if(phase === "guessing"){
+    modeText.textContent = "Guessing";
+    roundInfo.textContent = "Round "+currentRound;
+    hideOverlay();
+    hideRevealMap();
+    hasGuessedThisRound = false;
+    myGuess = null;
+    guessButton.disabled = false;
+    if(st.location){
+      currentLocation = st.location;
+      loadStreetViewAndMiniMap(currentLocation);
+    }
+    if(st.roundTime){
+      startTimer(st.roundTime, st.roundEndsAt);
+    }
+  } else if(phase === "revealing"){
+    modeText.textContent = "Reveal";
+    guessButton.disabled = true;
+    stopTimer();
+    if(st.location){
+      currentLocation = st.location;
+    }
+    showReveal(st);
+  } else if(phase === "gameover"){
+    modeText.textContent = "Game Over";
+    guessButton.disabled = true;
+    stopTimer();
+    showOverlay("Game Over", st.message || "Game finished.");
+    hideRevealMap();
+  }
+}
+
+// Host controls
+startGameBtn.onclick = async () => {
+  const sSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")).get(ref(db, "rooms/"+myRoom+"/settings"));
+  // simple: just read from selects
+  roundTime = parseInt(roundTimeSelect.value);
+  totalRounds = parseInt(totalRoundsSelect.value);
+  elimMode = (elimSelect.value === "on");
+
+  await update(ref(db, "rooms/"+myRoom+"/settings"), {
+    roundTime,
+    totalRounds,
+    elimination: elimMode
+  });
+
+  await update(stateRef(myRoom), {
+    phase: "starting",
+    round: 0
+  });
+
+  setTimeout(()=>hostStartNextRound(), 1500);
+};
+
+nextRoundBtn.onclick = () => {
+  hostStartNextRound();
+};
+
+async function hostStartNextRound(){
+  const stSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")).get(stateRef(myRoom));
+  const st = stSnap.val() || {};
+  let round = st.round || 0;
+  round++;
+  const settingsSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")).get(ref(db, "rooms/"+myRoom+"/settings"));
+  const s = settingsSnap.val() || {};
+  const rt = s.roundTime || 60;
+  const total = s.totalRounds || 5;
+  const elimination = !!s.elimination;
+
+  if(round > total){
+    await update(stateRef(myRoom), {
+      phase: "gameover",
+      round,
+      message: "All rounds completed."
     });
+    nextRoundBtn.style.display = "none";
+    return;
+  }
 
-    line = new google.maps.Polyline({
-        path:[guessPosition,currentLocation],
-        geodesic:true,
-        strokeColor:"#ff0000",
-        strokeOpacity:1,
-        strokeWeight:2,
-        map:map
+  const loc = randomLatLngWithRadius();
+  const now = Date.now();
+  const endsAt = now + rt*1000;
+
+  await update(stateRef(myRoom), {
+    phase: "guessing",
+    round,
+    location: loc,
+    roundTime: rt,
+    roundEndsAt: endsAt,
+    elimination
+  });
+
+  await remove(ref(db, "rooms/"+myRoom+"/guesses/round"+round));
+
+  nextRoundBtn.style.display = "none";
+}
+
+// Timer
+function startTimer(rt, endsAt){
+  stopTimer();
+  const now = Date.now();
+  if(endsAt){
+    timeLeft = Math.max(0, Math.round((endsAt - now)/1000));
+  }else{
+    timeLeft = rt;
+  }
+  timerEl.textContent = timeLeft+"s";
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    if(timeLeft <= 0){
+      timerEl.textContent = "0s";
+      stopTimer();
+      if(!hasGuessedThisRound){
+        autoSubmitGuess();
+      }
+    }else{
+      timerEl.textContent = timeLeft+"s";
+    }
+  },1000);
+}
+function stopTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+// Maps + Street View
+window.initMapsGame = function(){
+  miniMap = new google.maps.Map(document.getElementById("miniMap"), {
+    center:{lat:20,lng:0},
+    zoom:2,
+    disableDefaultUI:true,
+    gestureHandling:"greedy"
+  });
+
+  miniMap.addListener("click", (e)=>{
+    if(!miniMap) return;
+    const pos = {lat:e.latLng.lat(), lng:e.latLng.lng()};
+    myGuess = pos;
+    if(miniGuessMarker) miniGuessMarker.setMap(null);
+    miniGuessMarker = new google.maps.Marker({
+      position:pos,
+      map:miniMap
     });
+  });
 
-    const distance = getDistance(
-        guessPosition.lat,
-        guessPosition.lng,
-        currentLocation.lat,
-        currentLocation.lng
-    );
+  revealMap = new google.maps.Map(document.getElementById("revealMap"), {
+    center:{lat:20,lng:0},
+    zoom:2,
+    disableDefaultUI:false,
+    gestureHandling:"greedy"
+  });
+};
 
-    const points = Math.max(0,5000-Math.floor(distance));
-
-    score += points;
-
-    document.getElementById("distanceText").innerHTML =
-        "Distance: "+Math.floor(distance)+" km";
-
-    document.getElementById("pointsText").innerHTML =
-        "Points: "+points;
-
-    document.getElementById("result").style.display = "block";
-
-    updateUI();
-
-    setTimeout(()=>{
-
-        document.getElementById("result").style.display = "none";
-
-        currentRound++;
-
-        if(currentRound>totalRounds){
-
-            alert("Game Over! Final Score: "+score);
-            location.reload();
-
-        }else{
-
-            loadRound();
-
+function loadStreetViewAndMiniMap(loc){
+  const svService = new google.maps.StreetViewService();
+  svService.getPanorama({location:loc, radius:50000}, (data,status)=>{
+    if(status === "OK"){
+      streetViewPanorama = new google.maps.StreetViewPanorama(
+        document.getElementById("streetview"),
+        {
+          pano:data.location.pano,
+          pov:{heading:Math.random()*360,pitch:0},
+          addressControl:false,
+          showRoadLabels:false,
+          linksControl:true,
+          panControl:false,
+          enableCloseButton:false,
+          fullscreenControl:true
         }
+      );
+    }else{
+      // if fails, just center map
+      streetViewPanorama = null;
+    }
+  });
 
-    },5000);
-
+  if(miniMap){
+    miniMap.setCenter({lat:20,lng:0});
+    miniMap.setZoom(2);
+  }
+  if(miniGuessMarker){ miniGuessMarker.setMap(null); miniGuessMarker=null; }
+  myGuess = null;
 }
 
-function updateUI(){
+// Guessing
+guessButton.onclick = () => {
+  if(!myGuess){
+    alert("Click on the minimap to place your guess.");
+    return;
+  }
+  submitGuess();
+};
 
-    document.getElementById("round").innerText = currentRound;
-
-    document.getElementById("players").innerHTML =
-        "<div class='player'>You: "+score+" pts</div>";
-
+function autoSubmitGuess(){
+  if(myGuess){
+    submitGuess();
+  }else{
+    // no guess -> random fallback
+    myGuess = randomLatLng();
+    submitGuess();
+  }
 }
 
-function clearMap(){
+async function submitGuess(){
+  if(hasGuessedThisRound) return;
+  hasGuessedThisRound = true;
+  guessButton.disabled = true;
 
-    guessPosition = null;
+  const gRef = guessesRef(myRoom, currentRound);
+  const myGuessRef = ref(db, "rooms/"+myRoom+"/guesses/round"+currentRound+"/"+myId);
+  await set(myGuessRef, {
+    lat: myGuess.lat,
+    lng: myGuess.lng,
+    at: Date.now()
+  });
 
-    if(guessMarker) guessMarker.setMap(null);
-    if(realMarker) realMarker.setMap(null);
-    if(line) line.setMap(null);
-
+  setStatus("Guess submitted. Waiting for reveal…");
 }
 
-function getDistance(lat1,lon1,lat2,lon2){
-
-    const R = 6371;
-
-    const dLat = (lat2-lat1)*Math.PI/180;
-    const dLon = (lon2-lon1)*Math.PI/180;
-
-    const a =
-        Math.sin(dLat/2)*Math.sin(dLat/2)+
-        Math.cos(lat1*Math.PI/180)*
-        Math.cos(lat2*Math.PI/180)*
-        Math.sin(dLon/2)*Math.sin(dLon/2);
-
-    const c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-
-    return R*c;
-
+// Reveal
+function hideRevealMap(){
+  document.getElementById("revealMap").style.display = "none";
+  if(revealMarkers){
+    revealMarkers.forEach(m=>m.setMap(null));
+    revealMarkers = [];
+  }
+  if(revealLine){
+    revealLine.setMap(null);
+    revealLine = null;
+  }
 }
 
+function showReveal(st){
+  const loc = st.location;
+  if(!loc || !revealMap) return;
+
+  document.getElementById("revealMap").style.display = "block";
+  revealMap.setCenter(loc);
+  revealMap.setZoom(2);
+
+  if(revealMarkers){
+    revealMarkers.forEach(m=>m.setMap(null));
+    revealMarkers = [];
+  }
+  if(revealLine){
+    revealLine.setMap(null);
+    revealLine = null;
+  }
+
+  onValue(guessesRef(myRoom, currentRound), snap=>{
+    const guesses = snap.val() || {};
+    if(revealMarkers){
+      revealMarkers.forEach(m=>m.setMap(null));
+      revealMarkers = [];
+    }
+    Object.entries(guesses).forEach(([pid,g])=>{
+      const marker = new google.maps.Marker({
+        position:{lat:g.lat,lng:g.lng},
+        map:revealMap,
+        icon:"http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+      });
+      revealMarkers.push(marker);
+      if(pid === myId){
+        const dist = getDistanceKm(g.lat,g.lng,loc.lat,loc.lng);
+        showOverlay("Round result","Your guess was "+Math.round(dist)+" km away.");
+      }
+    });
+
+    const realMarker = new google.maps.Marker({
+      position:loc,
+      map:revealMap,
+      icon:"http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+    });
+    revealMarkers.push(realMarker);
+  });
+
+  if(isHost){
+    // host computes scores + elimination once per reveal
+    computeScoresAndElimination(st);
+  }
+  if(isHost){
+    nextRoundBtn.style.display = "block";
+  }
+}
+
+// Scoring + elimination (host)
+async function computeScoresAndElimination(st){
+  const guessesSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")).get(guessesRef(myRoom, currentRound));
+  const guesses = guessesSnap.val() || {};
+  const playersSnap = await (await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")).get(playersRef(myRoom));
+  const players = playersSnap.val() || {};
+  const loc = st.location;
+  if(!loc) return;
+
+  const updates = {};
+  const distances = [];
+
+  Object.entries(players).forEach(([pid,p])=>{
+    if(p.eliminated) return;
+    const g = guesses[pid];
+    if(!g) return;
+    const d = getDistanceKm(g.lat,g.lng,loc.lat,loc.lng);
+    const pts = Math.max(0, 5000 - Math.floor(d));
+    const newScore = (p.score || 0) + pts;
+    updates[pid+"/score"] = newScore;
+    distances.push({pid,dist:d});
+  });
+
+  await update(playersRef(myRoom), updates);
+
+  if(st.elimination){
+    if(distances.length > 1){
+      distances.sort((a,b)=>b.dist - a.dist); // farthest first
+      const eliminated = distances[0].pid;
+      await update(ref(db, "rooms/"+myRoom+"/players/"+eliminated), { eliminated:true });
+    }
+  }
+}
+
+// Helpers
+function makeId(){
+  return Math.random().toString(36).substr(2,9);
+}
+function makeRoomId(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for(let i=0;i<6;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function randomLatLng(){
+  const lat = (Math.random()*180)-90;
+  const lng = (Math.random()*360)-180;
+  return {lat,lng};
+}
+function randomLatLngWithRadius(){
+  // simple random; Street View availability not guaranteed but often OK
+  return randomLatLng();
+}
+function getDistanceKm(lat1,lon1,lat2,lon2){
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2)+
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+  const c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  return R*c;
+}
 </script>
 
-<script async defer
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI&callback=initGame">
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw3qNcrzz62Co7xCCccmtcOaRhbuo1uSI&callback=initMapsGame">
 </script>
 
 </body>
