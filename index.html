@@ -1,393 +1,777 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Multiplayer Hybrid GeoGuessr</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
-body{background:#111;color:#fff;}
-#topBar{padding:8px 12px;background:#181818;border-bottom:1px solid #333;display:flex;align-items:center;gap:10px;font-size:14px;}
-#topBar button{padding:6px 10px;border:none;border-radius:6px;background:#1e88e5;color:#fff;font-weight:bold;cursor:pointer;font-size:13px;}
-#topBar button:hover{background:#1565c0;}
-#topBar span{margin-right:10px;}
-#viewToggle{padding:4px 8px;font-size:12px;background:#333;}
-#game{display:flex;height:calc(100vh - 40px);}
-#viewMap{flex:1;position:relative;}
-#guessMap{flex:1;position:relative;border-left:2px solid #333;}
-.mapContainer{width:100%;height:100%;}
-#infoBox{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);padding:8px 10px;border-radius:8px;font-size:13px;z-index:500;}
-#infoBox div{margin-top:2px;}
-#message{margin-left:auto;font-size:13px;color:#ccc;}
-#lobby{padding:20px;}
-#lobby input,#lobby button,#lobby select{margin-top:8px;padding:8px;border-radius:6px;border:none;font-size:14px;}
-#lobby button{background:#1e88e5;color:#fff;font-weight:bold;cursor:pointer;}
-#lobby button:hover{background:#1565c0;}
-#playerList{margin-top:10px;font-size:14px;}
-.playerItem{margin-top:4px;}
-.hidden{display:none;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 World Geography Game</title>
+    <!-- GOOGLE MAPS API KEY - WILL BE SET BY USER -->
+    <script id="maps-api"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f0f4f8;
+            padding: 15px;
+        }
+        .screen {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .screen.active {
+            display: block;
+        }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            margin-top: 8px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2b6cb0;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background-color: #718096;
+        }
+        .btn-secondary:hover {
+            background-color: #4a5568;
+        }
+        .lobby-code-box {
+            background: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 15px 0;
+            border: 2px solid #cbd5e0;
+        }
+        .game-layout {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .streetview-container {
+            flex: 3;
+            min-width: 600px;
+            height: 550px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #cbd5e0;
+            background-color: #ccc;
+        }
+        .minimap-container {
+            flex: 1;
+            min-width: 280px;
+            height: 550px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #cbd5e0;
+            position: relative;
+            background-color: #f0f0f0;
+        }
+        .info-panel {
+            flex: 1 1 100%;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 15px;
+        }
+        .timer {
+            font-size: 26px;
+            font-weight: bold;
+            text-align: center;
+            color: #e53e3e;
+            margin: 10px 0;
+        }
+        .players-list, .scores-list {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .player-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #3182ce;
+        }
+        .player-item.guessed {
+            border-left-color: #48bb78;
+        }
+        .player-item.pending {
+            border-left-color: #ed8936;
+            opacity: 0.7;
+        }
+        .result-box {
+            text-align: center;
+            font-size: 17px;
+            margin: 10px 0;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+        .marker-legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .legend-item {
+            margin: 4px 0;
+        }
+        .legend-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .dot-guess { background-color: #2196F3; }
+        .dot-real { background-color: #f44336; }
+        .dot-other { background-color: #FFC107; }
+        .api-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .api-modal.active {
+            display: flex;
+        }
+        .api-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .api-modal-content h2 {
+            margin-bottom: 15px;
+        }
+        .api-modal-content input {
+            margin-bottom: 10px;
+        }
+        .api-modal-content button {
+            margin-top: 10px;
+        }
+        .error-msg {
+            color: #e53e3e;
+            font-weight: bold;
+            padding: 10px;
+            background: #fed7d7;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success-msg {
+            color: #22543d;
+            font-weight: bold;
+            padding: 10px;
+            background: #c6f6d5;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .guess-markers-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
-<div id="lobby">
-  <h2>Multiplayer Hybrid GeoGuessr</h2>
-
-  <label>Your Name</label><br>
-  <input id="playerName" placeholder="Enter your name">
-
-  <h3>Join a Game</h3>
-  <input id="joinRoomInput" placeholder="Room code">
-  <button id="joinBtn">Join Game</button>
-
-  <h3>Host a Game</h3>
-  <button id="hostBtn">Host Game</button>
-
-  <div id="hostSettings" class="hidden">
-    <h3>Host Settings</h3>
-
-    <label>Round Mode</label><br>
-    <select id="roundMode">
-      <option value="manual">Manual</option>
-      <option value="auto">Automatic</option>
-    </select>
-
-    <label>Round Time (seconds, auto mode only)</label><br>
-    <input id="roundTime" type="number" value="60" min="10" max="300">
-
-    <label>Number of Rounds (1–50)</label><br>
-    <input id="roundCount" type="number" value="5" min="1" max="50">
-
-    <button id="startGameBtn">Start Game</button>
-  </div>
-
-  <h3>Players</h3>
-  <div id="playerList"></div>
-
-  <div id="roomInfo"></div>
-</div>
-
-<div id="topBar" class="hidden">
-  <button id="newRoundBtn">NEW ROUND</button>
-  <button id="guessBtn" disabled>GUESS</button>
-  <button id="revealBtn" disabled>SHOW ANSWER</button>
-  <button id="viewToggle">View: Satellite</button>
-  <span>Round: <span id="roundText">0</span></span>
-  <span>Score: <span id="scoreText">0</span></span>
-  <span id="message"></span>
-</div>
-
-<div id="game" class="hidden">
-  <div id="viewMap">
-    <div id="viewMapInner" class="mapContainer"></div>
-    <div id="infoBox">
-      <div><strong>Left:</strong> Random location</div>
-      <div><strong>Right:</strong> Click to guess</div>
+    <!-- API CONFIGURATION MODAL -->
+    <div id="api-modal" class="api-modal">
+        <div class="api-modal-content">
+            <h2>🔑 Google Maps API Key</h2>
+            <p style="margin-bottom: 15px; color: #666;">Enter your Google Maps API key to play. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" style="color: #3182ce;">Get your key here</a></p>
+            <input type="password" id="api-key-input" placeholder="Enter your API key..." autocomplete="off">
+            <button onclick="saveAPIKey()">✅ Save & Continue</button>
+            <div id="api-error"></div>
+        </div>
     </div>
-  </div>
-  <div id="guessMap">
-    <div id="guessMapInner" class="mapContainer"></div>
-  </div>
-</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- MAIN MENU -->
+    <div id="main-menu" class="screen active">
+        <h1>🌍 World Geography Game</h1>
+        <div class="form-group">
+            <button onclick="showCreateLobby()">🎮 Host New Game</button>
+        </div>
+        <div class="form-group">
+            <button onclick="showJoinLobby()">🔌 Join Game with Code</button>
+        </div>
+        <div class="form-group">
+            <button class="btn-secondary" onclick="showAPIModal()">🔑 Change API Key</button>
+        </div>
+    </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, update, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    <!-- CREATE LOBBY SCREEN -->
+    <div id="create-lobby" class="screen">
+        <h1>Create Private Lobby</h1>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDY7Vp4D6kVvuUlEAuPj3fF5HAhgFQyuBM",
-  authDomain: "guess-guess-341f2.firebaseapp.com",
-  databaseURL: "https://guess-guess-341f2-default-rtdb.firebaseio.com/",
-  projectId: "guess-guess-341f2",
-  storageBucket: "guess-guess-341f2.firebasestorage.app",
-  messagingSenderId: "689612936370",
-  appId: "1:689612936370:web:813d881fdd7383c67a65ab"
-};
+        <div class="form-group">
+            <label>Game Mode:</label>
+            <select id="game-mode">
+                <option value="normal">Normal — Most Points Wins</option>
+                <option value="elimination">Elimination — Lowest Score Out Each Round</option>
+            </select>
+        </div>
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+        <div class="form-group">
+            <label>Number of Rounds:</label>
+            <input type="number" id="rounds-count" min="1" max="20" value="5">
+        </div>
 
-// DOM
-const lobby = document.getElementById("lobby");
-const hostBtn = document.getElementById("hostBtn");
-const joinBtn = document.getElementById("joinBtn");
-const playerNameInput = document.getElementById("playerName");
-const joinRoomInput = document.getElementById("joinRoomInput");
-const hostSettings = document.getElementById("hostSettings");
-const startGameBtn = document.getElementById("startGameBtn");
-const playerList = document.getElementById("playerList");
-const roomInfo = document.getElementById("roomInfo");
+        <div class="form-group">
+            <label>Time per Round (seconds):</label>
+            <input type="number" id="time-limit" min="10" max="300" value="60">
+        </div>
 
-const topBar = document.getElementById("topBar");
-const newRoundBtn = document.getElementById("newRoundBtn");
-const guessBtn = document.getElementById("guessBtn");
-const revealBtn = document.getElementById("revealBtn");
-const viewToggle = document.getElementById("viewToggle");
-const roundText = document.getElementById("roundText");
-const scoreText = document.getElementById("scoreText");
-const messageEl = document.getElementById("message");
+        <div class="lobby-code-box">
+            Lobby Code: <span id="generated-code">----</span>
+        </div>
 
-const roundModeSelect = document.getElementById("roundMode");
-const roundTimeInput = document.getElementById("roundTime");
-const roundCountInput = document.getElementById("roundCount");
+        <div class="form-group">
+            <label>Your Name:</label>
+            <input type="text" id="host-name" placeholder="Enter your name...">
+        </div>
 
-// Maps
-let viewMap, guessMap;
-let osmLayer, satLayer;
-let currentIsSatellite = true;
+        <button onclick="startHostGame()">✅ Create & Start</button>
+        <button class="btn-secondary" onclick="backToMenu()">⬅ Back</button>
+    </div>
 
-let currentLocation = null;
-let guessMarker = null;
-let answerMarker = null;
-let lineLayer = null;
+    <!-- JOIN LOBBY SCREEN -->
+    <div id="join-lobby" class="screen">
+        <h1>Join Private Lobby</h1>
 
-let myId = null;
-let myName = "";
-let myRoom = null;
-let isHost = false;
+        <div class="form-group">
+            <label>Enter Lobby Code:</label>
+            <input type="text" id="join-code" placeholder="e.g. 7X2K9P">
+        </div>
 
-let round = 0;
-let score = 0;
+        <div class="form-group">
+            <label>Your Name:</label>
+            <input type="text" id="join-name" placeholder="Enter your name...">
+        </div>
 
-// Init maps
-function initMaps(){
-  viewMap = L.map('viewMapInner', {center:[20,0], zoom:2});
-  guessMap = L.map('guessMapInner', {center:[20,0], zoom:2});
+        <button onclick="joinGame()">✅ Join Game</button>
+        <button class="btn-secondary" onclick="backToMenu()">⬅ Back</button>
+    </div>
 
-  osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-  satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}');
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <h2>Round <span id="current-round">1</span> / <span id="total-rounds">5</span></h2>
+        <div class="timer">⏱ Time Left: <span id="timer-value">60</span>s</div>
 
-  satLayer.addTo(viewMap);
-  osmLayer.addTo(guessMap);
+        <div class="game-layout">
+            <!-- STREET VIEW -->
+            <div class="streetview-container" id="streetview"></div>
 
-  guessMap.on('click', e=>{
-    placeGuess(e.latlng);
-  });
-}
+            <!-- MINIMAP FOR GUESSES -->
+            <div class="minimap-container">
+                <div class="marker-legend">
+                    <div class="legend-item"><span class="legend-dot dot-guess"></span> Your Guess</div>
+                    <div class="legend-item"><span class="legend-dot dot-real"></span> Real Location</div>
+                    <div class="legend-item"><span class="legend-dot dot-other"></span> Others' Guesses</div>
+                </div>
+                <div id="guess-map" style="width:100%;height:100%;"></div>
+            </div>
 
-function setMessage(msg){
-  messageEl.textContent = msg;
-}
+            <!-- INFO PANEL -->
+            <div class="info-panel">
+                <button onclick="submitGuess()" id="submit-btn">📍 Submit Guess</button>
+                <button onclick="nextRound()" id="next-btn" style="display:none;">➡ Next Round</button>
 
-function randomLatLng(){
-  return {
-    lat:(Math.random()*180)-90,
-    lng:(Math.random()*360)-180
-  };
-}
+                <div class="players-list">
+                    <h4>👥 Players & Guesses</h4>
+                    <div id="players-list"></div>
+                </div>
 
-function distanceKm(lat1,lon1,lat2,lon2){
-  const R=6371;
-  const dLat=(lat2-lat1)*Math.PI/180;
-  const dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+
-          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-          Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
+                <div id="result-text" class="result-box"></div>
+                <div class="guess-markers-info">ℹ️ All guesses are displayed on the map. Red marker = correct answer.</div>
+            </div>
+        </div>
+    </div>
 
-function placeGuess(latlng){
-  if(guessMarker) guessMap.removeLayer(guessMarker);
-  guessMarker = L.marker(latlng).addTo(guessMap);
-}
+    <!-- END SCREEN -->
+    <div id="end-screen" class="screen">
+        <h1>🏁 Game Over!</h1>
+        <div class="scores-list">
+            <h2>Final Standings</h2>
+            <div id="final-results"></div>
+        </div>
+        <button onclick="resetGame()">🔄 Play Again</button>
+    </div>
 
-function clearRoundGraphics(){
-  if(guessMarker){ guessMap.removeLayer(guessMarker); guessMarker=null; }
-  if(answerMarker){ guessMap.removeLayer(answerMarker); answerMarker=null; }
-  if(lineLayer){ guessMap.removeLayer(lineLayer); lineLayer=null; }
-}
+    <script>
+        // GAME STATE
+        let gameState = {
+            mode: 'normal',
+            totalRounds: 5,
+            currentRound: 1,
+            timeLimit: 60,
+            timeLeft: 60,
+            players: [],
+            activePlayers: [],
+            locations: [],
+            currentLocation: null,
+            timer: null,
+            streetView: null,
+            guessMap: null,
+            guessMarkers: [],
+            realMarker: null,
+            lobbyCode: null,
+            userGuess: null,
+            gameRunning: false,
+            apiKey: null
+        };
 
-function toggleView(){
-  if(currentIsSatellite){
-    viewMap.removeLayer(satLayer);
-    osmLayer.addTo(viewMap);
-    currentIsSatellite=false;
-    viewToggle.textContent="View: Map";
-  }else{
-    viewMap.removeLayer(osmLayer);
-    satLayer.addTo(viewMap);
-    currentIsSatellite=true;
-    viewToggle.textContent="View: Satellite";
-  }
-}
+        // 🗺️ WORLD LOCATIONS (Educational Geography Game)
+        const globalLocations = [
+            { lat: 48.8566, lng: 2.3522, name: "Paris, France" },
+            { lat: 51.5074, lng: -0.1278, name: "London, United Kingdom" },
+            { lat: 41.9028, lng: 12.4964, name: "Rome, Italy" },
+            { lat: 52.5200, lng: 13.4050, name: "Berlin, Germany" },
+            { lat: 40.4168, lng: -3.7038, name: "Madrid, Spain" },
+            { lat: 35.6762, lng: 139.6503, name: "Tokyo, Japan" },
+            { lat: 40.7128, lng: -74.0060, name: "New York, USA" },
+            { lat: -33.8688, lng: 151.2093, name: "Sydney, Australia" },
+            { lat: 55.7558, lng: 37.6173, name: "Moscow, Russia" },
+            { lat: -22.9068, lng: -43.1729, name: "Rio de Janeiro, Brazil" },
+            { lat: 28.6139, lng: 77.2090, name: "New Delhi, India" },
+            { lat: -1.2921, lng: 36.8219, name: "Nairobi, Kenya" },
+            { lat: 37.7749, lng: -122.4194, name: "San Francisco, USA" },
+            { lat: 59.3293, lng: 18.0686, name: "Stockholm, Sweden" },
+            { lat: 48.2082, lng: 16.3738, name: "Vienna, Austria" },
+            { lat: 25.2760, lng: 55.2962, name: "Dubai, UAE" },
+            { lat: 1.3521, lng: 103.8198, name: "Singapore" },
+            { lat: 39.9042, lng: 116.4074, name: "Beijing, China" },
+            { lat: -34.6037, lng: -58.3816, name: "Buenos Aires, Argentina" },
+            { lat: 41.0082, lng: 28.9784, name: "Istanbul, Turkey" },
+            { lat: 50.0755, lng: 14.4378, name: "Prague, Czechia" },
+            { lat: 37.9838, lng: 23.7275, name: "Athens, Greece" },
+            { lat: 53.3498, lng: -6.2603, name: "Dublin, Ireland" },
+            { lat: 19.4326, lng: -99.1332, name: "Mexico City, Mexico" },
+            { lat: -41.2865, lng: 174.7762, name: "Wellington, New Zealand" },
+            { lat: 45.4215, lng: -75.6972, name: "Ottawa, Canada" },
+            { lat: 24.8607, lng: 67.0011, name: "Karachi, Pakistan" },
+            { lat: -6.2088, lng: 106.8456, name: "Jakarta, Indonesia" },
+            { lat: 55.6761, lng: 12.5683, name: "Copenhagen, Denmark" },
+            { lat: 47.4979, lng: 19.0402, name: "Budapest, Hungary" },
+            { lat: 38.7223, lng: -9.1393, name: "Lisbon, Portugal" },
+            { lat: 52.2297, lng: 21.0122, name: "Warsaw, Poland" },
+            { lat: 43.7384, lng: 7.4246, name: "Monaco" },
+            { lat: 50.8503, lng: 4.3517, name: "Brussels, Belgium" },
+            { lat: 59.9139, lng: 10.7522, name: "Oslo, Norway" },
+            { lat: 24.7136, lng: 46.6753, name: "Riyadh, Saudi Arabia" },
+            { lat: 36.1627, lng: -86.7816, name: "Nashville, USA" },
+            { lat: -26.2041, lng: 28.0473, name: "Johannesburg, South Africa" },
+            { lat: 41.3851, lng: 2.1734, name: "Barcelona, Spain" },
+            { lat: 22.3193, lng: 114.1694, name: "Hong Kong, China" },
+            { lat: 13.7563, lng: 100.5018, name: "Bangkok, Thailand" },
+            { lat: -33.4489, lng: -70.6693, name: "Santiago, Chile" },
+            { lat: 4.7110, lng: -74.0721, name: "Bogotá, Colombia" },
+            { lat: 14.5995, lng: 120.9842, name: "Manila, Philippines" },
+            { lat: 27.7172, lng: 85.3240, name: "Kathmandu, Nepal" },
+            { lat: 33.7490, lng: -84.3880, name: "Atlanta, USA" },
+            { lat: -17.8252, lng: 25.8567, name: "Lusaka, Zambia" },
+            { lat: 30.0444, lng: 31.2357, name: "Cairo, Egypt" },
+            { lat: 18.5204, lng: 73.8567, name: "Mumbai, India" },
+            { lat: 19.0760, lng: 72.8777, name: "Mumbai, India" }
+        ];
 
-// Multiplayer
-function makeId(){
-  return Math.random().toString(36).substr(2,9);
-}
+        // ========== API KEY MANAGEMENT ==========
+        function showAPIModal() {
+            document.getElementById('api-modal').classList.add('active');
+        }
 
-function roomRef(id){ return ref(db,"rooms/"+id); }
-function playersRef(id){ return ref(db,"rooms/"+id+"/players"); }
-function stateRef(id){ return ref(db,"rooms/"+id+"/state"); }
-function guessesRef(id,r){ return ref(db,"rooms/"+id+"/guesses/round"+r); }
+        function closeAPIModal() {
+            document.getElementById('api-modal').classList.remove('active');
+        }
 
-hostBtn.onclick = ()=>{
-  myId = makeId();
-  myName = playerNameInput.value.trim() || "Player";
-  myRoom = makeId().toUpperCase();
-  isHost = true;
+        function saveAPIKey() {
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            if (!apiKey) {
+                showAPIError('Please enter an API key');
+                return;
+            }
+            if (apiKey.length < 20) {
+                showAPIError('API key appears too short. Please check it.');
+                return;
+            }
+            gameState.apiKey = apiKey;
+            localStorage.setItem('mapsApiKey', apiKey);
+            loadMapsAPI(apiKey);
+            closeAPIModal();
+            showAPISuccess('API key saved successfully!');
+        }
 
-  set(roomRef(myRoom),{
-    host:myId,
-    settings:{},
-    state:{phase:"lobby",round:0}
-  });
+        function showAPIError(msg) {
+            const errorDiv = document.getElementById('api-error');
+            errorDiv.className = 'error-msg';
+            errorDiv.textContent = msg;
+        }
 
-  set(ref(db,"rooms/"+myRoom+"/players/"+myId),{
-    name:myName,
-    score:0
-  });
+        function showAPISuccess(msg) {
+            const errorDiv = document.getElementById('api-error');
+            errorDiv.className = 'success-msg';
+            errorDiv.textContent = msg;
+            setTimeout(() => errorDiv.textContent = '', 3000);
+        }
 
-  enterLobby();
-};
+        function loadMapsAPI(apiKey) {
+            const script = document.getElementById('maps-api');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+        }
 
-joinBtn.onclick = ()=>{
-  myId = makeId();
-  myName = playerNameInput.value.trim() || "Player";
-  myRoom = joinRoomInput.value.trim().toUpperCase();
-  isHost = false;
+        // ========== SCREEN NAVIGATION ==========
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
 
-  set(ref(db,"rooms/"+myRoom+"/players/"+myId),{
-    name:myName,
-    score:0
-  });
+        function showCreateLobby() {
+            if (!gameState.apiKey) {
+                showAPIModal();
+                return;
+            }
+            generateLobbyCode();
+            showScreen('create-lobby');
+        }
 
-  enterLobby();
-};
+        function showJoinLobby() {
+            if (!gameState.apiKey) {
+                showAPIModal();
+                return;
+            }
+            showScreen('join-lobby');
+        }
 
-function enterLobby(){
-  lobby.classList.remove("hidden");
-  hostSettings.classList.toggle("hidden",!isHost);
+        function backToMenu() {
+            showScreen('main-menu');
+        }
 
-  onValue(playersRef(myRoom), snap=>{
-    const players = snap.val()||{};
-    playerList.innerHTML="";
-    Object.values(players).forEach(p=>{
-      const div=document.createElement("div");
-      div.className="playerItem";
-      div.textContent=p.name+" ("+(p.score||0)+" pts)";
-      playerList.appendChild(div);
-    });
-  });
+        // ========== LOBBY FUNCTIONS ==========
+        function generateLobbyCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            gameState.lobbyCode = code;
+            document.getElementById('generated-code').textContent = code;
+        }
 
-  onValue(stateRef(myRoom), snap=>{
-    const st=snap.val();
-    if(!st) return;
-    if(st.phase==="game"){
-      startGameUI();
-    }
-    if(st.phase==="round"){
-      loadRound(st);
-    }
-    if(st.phase==="reveal"){
-      revealRound(st);
-    }
-  });
+        function startHostGame() {
+            const name = document.getElementById('host-name').value.trim();
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+            gameState.mode = document.getElementById('game-mode').value;
+            gameState.totalRounds = parseInt(document.getElementById('rounds-count').value);
+            gameState.timeLimit = parseInt(document.getElementById('time-limit').value);
+            gameState.currentRound = 1;
+            gameState.players = [{ name: name, score: 0, guess: null, guessed: false, active: true }];
+            startGame();
+        }
 
-  roomInfo.textContent="Room: "+myRoom;
-}
+        function joinGame() {
+            const code = document.getElementById('join-code').value.trim().toUpperCase();
+            const name = document.getElementById('join-name').value.trim();
+            if (!code || !name) {
+                alert('Please enter lobby code and name');
+                return;
+            }
+            if (code !== gameState.lobbyCode) {
+                alert('Invalid lobby code');
+                return;
+            }
+            gameState.players.push({ name: name, score: 0, guess: null, guessed: false, active: true });
+            showScreen('game-screen');
+        }
 
-startGameBtn.onclick = ()=>{
-  const settings = {
-    mode:roundModeSelect.value,
-    roundTime:parseInt(roundTimeInput.value),
-    roundCount:parseInt(roundCountInput.value)
-  };
+        // ========== GAME FUNCTIONS ==========
+        function startGame() {
+            gameState.gameRunning = true;
+            gameState.activePlayers = gameState.players.filter(p => p.active);
+            selectLocation();
+            initializeStreetView();
+            initializeGuessMap();
+            showScreen('game-screen');
+            updateUI();
+            startTimer();
+        }
 
-  update(ref(db,"rooms/"+myRoom+"/settings"),settings);
-  update(stateRef(myRoom),{phase:"game",round:0});
-};
+        function selectLocation() {
+            gameState.currentLocation = globalLocations[Math.floor(Math.random() * globalLocations.length)];
+            gameState.userGuess = null;
+            gameState.players.forEach(p => {
+                p.guess = null;
+                p.guessed = false;
+            });
+            clearGuessMarkers();
+        }
 
-function startGameUI(){
-  lobby.classList.add("hidden");
-  topBar.classList.remove("hidden");
-  document.getElementById("game").classList.remove("hidden");
-  initMaps();
-}
+        function initializeStreetView() {
+            if (!gameState.streetView && gameState.currentLocation) {
+                gameState.streetView = new google.maps.StreetViewPanorama(
+                    document.getElementById('streetview'),
+                    {
+                        position: { lat: gameState.currentLocation.lat, lng: gameState.currentLocation.lng },
+                        pov: { heading: 0, pitch: 0 }
+                    }
+                );
+            } else if (gameState.streetView) {
+                gameState.streetView.setPosition({ lat: gameState.currentLocation.lat, lng: gameState.currentLocation.lng });
+            }
+        }
 
-newRoundBtn.onclick = ()=>{
-  if(!isHost) return;
-  const loc=randomLatLng();
-  round++;
-  update(stateRef(myRoom),{
-    phase:"round",
-    round,
-    location:loc
-  });
-};
+        function initializeGuessMap() {
+            if (!gameState.guessMap) {
+                gameState.guessMap = new google.maps.Map(document.getElementById('guess-map'), {
+                    zoom: 2,
+                    center: { lat: 20, lng: 0 }
+                });
+                gameState.guessMap.addListener('click', (e) => {
+                    placeGuess(e.latLng);
+                });
+            }
+        }
 
-function loadRound(st){
-  clearRoundGraphics();
-  currentLocation=st.location;
-  roundText.textContent=st.round;
-  guessBtn.disabled=false;
-  revealBtn.disabled=true;
-  setMessage("Place your guess.");
+        function placeGuess(location) {
+            gameState.userGuess = { lat: location.lat(), lng: location.lng() };
+            updateGuessMarkers();
+        }
 
-  viewMap.setView(currentLocation,14);
-}
+        function clearGuessMarkers() {
+            gameState.guessMarkers.forEach(m => m.setMap(null));
+            gameState.guessMarkers = [];
+            if (gameState.realMarker) {
+                gameState.realMarker.setMap(null);
+                gameState.realMarker = null;
+            }
+        }
 
-guessBtn.onclick = ()=>{
-  if(!guessMarker){
-    setMessage("Click on the right map to guess.");
-    return;
-  }
-  const g=guessMarker.getLatLng();
-  set(ref(db,"rooms/"+myRoom+"/guesses/round"+round+"/"+myId),{
-    lat:g.lat,lng:g.lng
-  });
-  guessBtn.disabled=true;
-  setMessage("Guess submitted.");
-  if(isHost){
-    revealBtn.disabled=false;
-  }
-};
+        function updateGuessMarkers() {
+            clearGuessMarkers();
 
-revealBtn.onclick = ()=>{
-  if(!isHost) return;
-  update(stateRef(myRoom),{phase:"reveal",round});
-};
+            // Draw all player guesses (except real location)
+            gameState.players.forEach((player, idx) => {
+                if (player.guess) {
+                    const isYourGuess = (player === gameState.players[0]);
+                    const marker = new google.maps.Marker({
+                        position: { lat: player.guess.lat, lng: player.guess.lng },
+                        map: gameState.guessMap,
+                        title: isYourGuess ? 'Your Guess' : `${player.name}'s Guess`,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: isYourGuess ? 12 : 8,
+                            fillColor: isYourGuess ? '#2196F3' : '#FFC107',
+                            fillOpacity: 0.8,
+                            strokeColor: 'white',
+                            strokeWeight: 2
+                        }
+                    });
+                    gameState.guessMarkers.push(marker);
+                }
+            });
+        }
 
-function revealRound(st){
-  onValue(guessesRef(myRoom,round), snap=>{
-    const guesses=snap.val()||{};
-    if(answerMarker) guessMap.removeLayer(answerMarker);
-    answerMarker=L.marker(currentLocation,{icon:redIcon()}).addTo(guessMap);
+        function submitGuess() {
+            if (!gameState.userGuess) {
+                alert('Please click on the map to place your guess');
+                return;
+            }
+            gameState.players[0].guess = gameState.userGuess;
+            gameState.players[0].guessed = true;
+            updateGuessMarkers();
+            document.getElementById('submit-btn').disabled = true;
+            updateUI();
+            checkAllGuessed();
+        }
 
-    Object.entries(guesses).forEach(([pid,g])=>{
-      const m=L.marker([g.lat,g.lng]).addTo(guessMap);
-      const line=L.polyline([[g.lat,g.lng],[currentLocation.lat,currentLocation.lng]],{color:"yellow"}).addTo(guessMap);
-      lineLayer=line;
-      if(pid===myId){
-        const d=distanceKm(g.lat,g.lng,currentLocation.lat,currentLocation.lng);
-        const pts=Math.max(0,5000-Math.round(d));
-        score+=pts;
-        scoreText.textContent=score;
-        setMessage("You were "+Math.round(d)+" km away. +"+pts+" pts");
-      }
-    });
+        function checkAllGuessed() {
+            const allGuessed = gameState.players.every(p => p.guessed);
+            if (allGuessed) {
+                endRound();
+            }
+        }
 
-    const bounds=L.latLngBounds([currentLocation]);
-    Object.values(guesses).forEach(g=>bounds.extend([g.lat,g.lng]));
-    guessMap.fitBounds(bounds.pad(0.3));
-  });
-}
+        function startTimer() {
+            gameState.timeLeft = gameState.timeLimit;
+            updateTimerDisplay();
+            if (gameState.timer) clearInterval(gameState.timer);
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimerDisplay();
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timer);
+                    endRound();
+                }
+            }, 1000);
+        }
 
-function redIcon(){
-  return L.icon({
-    iconUrl:"https://maps.gstatic.com/mapfiles/ms2/micons/red-dot.png",
-    iconSize:[24,24],
-    iconAnchor:[12,24]
-  });
-}
+        function updateTimerDisplay() {
+            document.getElementById('timer-value').textContent = Math.max(0, gameState.timeLeft);
+        }
 
-viewToggle.onclick = toggleView;
-</script>
+        function endRound() {
+            clearInterval(gameState.timer);
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'block';
 
+            // Auto-submit remaining guesses
+            gameState.players.forEach(p => {
+                if (!p.guessed && gameState.userGuess) {
+                    p.guess = gameState.userGuess;
+                }
+            });
+
+            // Calculate scores
+            gameState.players.forEach(player => {
+                if (player.guess) {
+                    const distance = calculateDistance(player.guess, gameState.currentLocation);
+                    const points = Math.max(0, 1000 - Math.floor(distance * 1.5));
+                    player.score += points;
+                }
+            });
+
+            // Show real location on map
+            gameState.realMarker = new google.maps.Marker({
+                position: gameState.currentLocation,
+                map: gameState.guessMap,
+                title: gameState.currentLocation.name,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 14,
+                    fillColor: '#f44336',
+                    fillOpacity: 0.9,
+                    strokeColor: 'white',
+                    strokeWeight: 3
+                }
+            });
+            gameState.guessMarkers.push(gameState.realMarker);
+
+            updateUI();
+        }
+
+        function calculateDistance(point1, point2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLng = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function nextRound() {
+            if (gameState.currentRound < gameState.totalRounds) {
+                gameState.currentRound++;
+                document.getElementById('current-round').textContent = gameState.currentRound;
+                document.getElementById('submit-btn').style.display = 'block';
+                document.getElementById('submit-btn').disabled = false;
+                document.getElementById('next-btn').style.display = 'none';
+                document.getElementById('result-text').innerHTML = '';
+                selectLocation();
+                initializeStreetView();
+                updateUI();
+                startTimer();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            showScreen('end-screen');
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const html = sorted.map((p, i) => `<div class="player-item"><strong>#${i+1}: ${p.name}</strong> - ${p.score} points</div>`).join('');
+            document.getElementById('final-results').innerHTML = html;
+        }
+
+        function resetGame() {
+            gameState.currentRound = 1;
+            gameState.players.forEach(p => p.score = 0);
+            backToMenu();
+        }
+
+        function updateUI() {
+            // Update player list with guess status
+            const playersList = gameState.players.map(p => {
+                const status = p.guessed ? '✅' : '⏳';
+                const className = p.guessed ? 'guessed' : 'pending';
+                return `<div class="player-item ${className}"><strong>${p.name}</strong> - ${p.score} pts ${status}</div>`;
+            }).join('');
+            document.getElementById('players-list').innerHTML = playersList;
+
+            // Update round info
+            document.getElementById('current-round').textContent = gameState.currentRound;
+            document.getElementById('total-rounds').textContent = gameState.totalRounds;
+        }
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('load', () => {
+            const savedApiKey = localStorage.getItem('mapsApiKey');
+            if (savedApiKey) {
+                gameState.apiKey = savedApiKey;
+                loadMapsAPI(savedApiKey);
+            } else {
+                showAPIModal();
+            }
+        });
+    </script>
 </body>
-</html>
